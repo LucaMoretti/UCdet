@@ -3,9 +3,11 @@
 clear
 clc
 
-addpath(genpath('D:\Dottorato\Ottimizzazione\Filone moretti!'))
+%addpath(genpath('D:\Dottorato\Ottimizzazione\Filone moretti!'))
 
-Filename='Input.xlsm';
+excelpath=fileparts(pwd());
+
+Filename=strcat(excelpath,'\Input.xlsm');
 
 [~,range]=xlsread(Filename,'Demand','datarange');
 [D,Dnames]=xlsread(Filename,'Demand',range{1});
