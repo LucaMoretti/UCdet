@@ -1,20 +1,18 @@
 %% DATA READING FROM EXCEL FILE
 
-clear
-clc
-
 %addpath(genpath('D:\Dottorato\Ottimizzazione\Filone moretti!'))
 
 excelpath=fileparts(pwd());
 
-Filename=strcat(excelpath,'\Input.xlsm');
+Filename='Input.xlsm';
+Filepath=strcat(excelpath,'\',Filename);
 
-[~,range]=xlsread(Filename,'Demand','datarange');
-[D,Dnames]=xlsread(Filename,'Demand',range{1});
-[~,range]=xlsread(Filename,'Undispatch','ddatarange');
-[Undisp,Undispnames]=xlsread(Filename,'Undispatch',range{1});
-[~,range]=xlsread(Filename,'Prices','pricerange');
-[Prices,Pricetags]=xlsread(Filename,'Prices',range{1});
+[~,range]=xlsread(Filepath,'Demand','datarange');
+[D,Dnames]=xlsread(Filepath,'Demand',range{1});
+[~,range]=xlsread(Filepath,'Undispatch','ddatarange');
+[Undisp,Undispnames]=xlsread(Filepath,'Undispatch',range{1});
+[~,range]=xlsread(Filepath,'Prices','pricerange');
+[Prices,Pricetags]=xlsread(Filepath,'Prices',range{1});
 
 x=find(~cellfun(@isempty,Undispnames(1,:)));
 Nundisp=length(x);
@@ -27,7 +25,7 @@ for i=1:Nundisp
 end
     
 %Simulation horizon and timestep settings
-timestep = xlsread(Filename,'Demand','tdur');   % simulation timestep [h]
+timestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
 ntimes=size(D,1);                               % total number of timesteps
 days=ntimes*timestep/24;                        % simulation days
 
@@ -36,10 +34,8 @@ ExcelApp = actxserver('Excel.Application');
 ExcelApp.Visible = 1;
 
 % Open file located in the current folder.
-ExcelApp.Workbooks.Open(fullfile(pwd,'\',Filename));
-% Run Macro1, defined in "ThisWorkBook" with one parameter. A return value cannot be retrieved.
+ExcelApp.Workbooks.Open(fullfile(Filepath));
 Nmachines=ExcelApp.Run('machinesref');  %Total number of machines
-% ExcelApp.workbooks.Saved = 1;
 ExcelApp.Workbooks.Item(Filename).Save 
 ExcelApp.Quit;
 ExcelApp.release;
@@ -49,8 +45,8 @@ ExcelApp.release;
 D={{Dnames{:}}' D'}; 
 
 Nmachines=double(Nmachines);
-[~,range]=xlsread(Filename,'DATA','I2');
-[~,refranges]=xlsread(Filename,'DATA',range{1});
+[~,range]=xlsread(Filepath,'DATA','I2');
+[~,refranges]=xlsread(Filepath,'DATA',range{1});
 
 %INPUT DATA: 
 %column1 --> machine name; 
@@ -64,10 +60,10 @@ Nmachines=double(Nmachines);
 %Each row corresponds to a different machine
 for i=1:Nmachines
     for j=1:3
-    [~, Machines{i,j}]=xlsread(Filename,'Machines',refranges{i,j});
+    [~, Machines{i,j}]=xlsread(Filepath,'Machines',refranges{i,j});
     end
     for j=4:7
-    Machines{i,j}=xlsread(Filename,'Machines',refranges{i,j});
+    Machines{i,j}=xlsread(Filepath,'Machines',refranges{i,j});
     end
     flagsvector(i)=Machines{i,7}(1);
 end
@@ -106,15 +102,15 @@ Noutputs=size(Outputs,2);
 
 %sarebbe bello avere reference variabile su inizio nomi storage ma vabbè
 i=1;
-[~,storname]=xlsread(Filename,'Stor&Net',strcat('A',num2str(2+i)));
+[~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(2+i)));
 while ~isempty(storname)
     Storages(i,1)=storname;
-    storvals=xlsread(Filename,'Stor&Net',strcat('B',num2str(2+i),':J',num2str(2+i)));
+    storvals=xlsread(Filepath,'Stor&Net',strcat('B',num2str(2+i),':J',num2str(2+i)));
     for j=2:10
         Storages{i,j}=storvals(j-1);
     end
     i=i+1;
-    [~,storname]=xlsread(Filename,'Stor&Net',strcat('A',num2str(2+i)));
+    [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(2+i)));
 end    
 
  
@@ -126,11 +122,11 @@ Nstorages=size(Storages,1);
 %column2 --> max withdrawal rate
 %column3 --> max injection rate
 i=1;
-[k,netname]=xlsread(Filename,'Stor&Net',strcat('L',num2str(2+i)));
+[k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(2+i)));
 while ~isempty(netname)
     Networks(i,1)=netname;
-    netvals{1}=xlsread(Filename,'Stor&Net',strcat('M',num2str(2+i),':M',num2str(2+i)));
-    netvals{2}=xlsread(Filename,'Stor&Net',strcat('N',num2str(2+i),':N',num2str(2+i)));
+    netvals{1}=xlsread(Filepath,'Stor&Net',strcat('M',num2str(2+i),':M',num2str(2+i)));
+    netvals{2}=xlsread(Filepath,'Stor&Net',strcat('N',num2str(2+i),':N',num2str(2+i)));
     for j=2:3
         if ~isempty(netvals{j-1})
             Networks{i,j}=netvals{j-1};
@@ -139,7 +135,7 @@ while ~isempty(netname)
         end        
     end
     i=i+1;
-    [k,netname]=xlsread(Filename,'Stor&Net',strcat('L',num2str(2+i)));
+    [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(2+i)));
 end    
 
 

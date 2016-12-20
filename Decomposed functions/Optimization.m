@@ -1,5 +1,8 @@
 %% CREATION OF OPTIMIZATION PROBLEM
 
+if suppresswarning==1
+    warning('off','all')
+end
 
 %%ATTIVA CONTROLLO CONVESSITà 
 convcheck=true;
@@ -98,11 +101,11 @@ for i=1:Nmachines
         Mbig=Mbigspare;
     end
     %Vincolo in salita con accensione macchina a carico arbitrario
-%     Constr=[Constr OUTPUT{i}(1,2:end) - OUTPUT{i}(1,1:(end-1)) <= Machines{i,6}(2)*timestep + (1-Z(i,1:(end-1)))*Mbig]; %again, ramp limit on main machine output
+    Constr=[Constr OUTPUT{i}(1,2:end) - OUTPUT{i}(1,1:(end-1)) <= Machines{i,6}(2)*timestep + (1-Z(i,1:(end-1)))*Mbig]; %again, ramp limit on main machine output
     %Vincolo in salita con accensione macchina a minimo carico --> il
     %minimo carico può essere sostituito con un nuovo parametro ad hoc che
     %consenta alla macchina in fase di avviamento di lavorare anche sotto al minimo carico normale 
-    Constr=[Constr OUTPUT{i}(1,2:end) - OUTPUT{i}(1,1:(end-1)) <= Machines{i,6}(2)*timestep.*Z(i,1:(end-1)) + (Z(i,2:end)-Z(i,1:(end-1)))*Machines{i,5}(1)];
+%     Constr=[Constr OUTPUT{i}(1,2:end) - OUTPUT{i}(1,1:(end-1)) <= Machines{i,6}(2)*timestep.*Z(i,1:(end-1)) + (Z(i,2:end)-Z(i,1:(end-1)))*Machines{i,5}(1)];
     
     %Vincolo in discesa 
     Constr=[Constr OUTPUT{i}(1,1:(end-1)) - OUTPUT{i}(1,2:end) <= Machines{i,6}(1)*timestep + (1-Z(i,2:end))*Mbig]; %again, ramp limit on main machine output
@@ -312,6 +315,11 @@ for j=1:Nfuels
 end
 
 
+if suppresswarning==1
+    warning('on','all')
+end
+
+waitbar(0.6,han,'Problem Solution')
 
 %%%%%%%%%%%%%%%%%%%%%%
 % OBJECTIVE FUNCTION %
