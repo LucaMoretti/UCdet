@@ -8,26 +8,30 @@ Filename='Input.xlsm';
 Filepath=strcat(excelpath,'\',Filename);
 
 [~,range]=xlsread(Filepath,'Demand','datarange');
-[D,Dnames]=xlsread(Filepath,'Demand',range{1});
+[Dall,Dnames]=xlsread(Filepath,'Demand',range{1});
 [~,range]=xlsread(Filepath,'Undispatch','ddatarange');
-[Undisp,Undispnames]=xlsread(Filepath,'Undispatch',range{1});
+if ~isempty(range) 
+    [Undisp,Undispnames]=xlsread(Filepath,'Undispatch',range{1});
+    x=find(~cellfun(@isempty,Undispnames(1,:)));
+    Nundisp=length(x);
+    x(end+1)=length(Undispnames(2,:))+1;
+else
+    Nundisp=0;
+end
 [~,range]=xlsread(Filepath,'Prices','pricerange');
 [Prices,Pricetags]=xlsread(Filepath,'Prices',range{1});
 
-x=find(~cellfun(@isempty,Undispnames(1,:)));
-Nundisp=length(x);
-x(end+1)=length(Undispnames(2,:))+1;
 
 for i=1:Nundisp
-    UndProd{i,1}=Undispnames(1,x(i));
-    UndProd{i,2}=Undispnames(2,x(i):(x(i+1)-1));
-    UndProd{i,3}=Undisp(:,x(i):(x(i+1)-1))';
+    UndProdall{i,1}=Undispnames(1,x(i));
+    UndProdall{i,2}=Undispnames(2,x(i):(x(i+1)-1));
+    UndProdall{i,3}=Undisp(:,x(i):(x(i+1)-1))';
 end
     
 %Simulation horizon and timestep settings
 timestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
-ntimes=size(D,1);                               % total number of timesteps
-days=ntimes*timestep/24;                        % simulation days
+ntimestot=size(Dall,1);                               % total number of timesteps
+days=ntimestot*timestep/24;                        % simulation days
 
 % Create object.
 ExcelApp = actxserver('Excel.Application');
@@ -42,7 +46,7 @@ ExcelApp.release;
  
 
 %Demand for each good: row=good ; columns=timestep
-D={{Dnames{:}}' D'}; 
+Dall={{Dnames{:}}' Dall'}; 
 
 Nmachines=double(Nmachines);
 [~,range]=xlsread(Filepath,'DATA','I2');
@@ -79,7 +83,7 @@ Inputs=unique(Inputs, 'Stable');    %Gets rid of duplicates
 %All possible outputs (without duplicates)
                                                         %Now defined on the basis of demand profiles, but what if there is an
                                                         %internal consumption?
-Outputs=([D{:,1}])';
+Outputs=([Dall{:,1}])';
 % Outputs=unique([Machines{:,3}]);                                                          
 
 Noutputs=size(Outputs,2);
@@ -124,14 +128,14 @@ Nstorages=size(Storages,1);
 i=1;
 [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(2+i)));
 while ~isempty(netname)
-    Networks(i,1)=netname;
+    Networksall(i,1)=netname;
     netvals{1}=xlsread(Filepath,'Stor&Net',strcat('M',num2str(2+i),':M',num2str(2+i)));
     netvals{2}=xlsread(Filepath,'Stor&Net',strcat('N',num2str(2+i),':N',num2str(2+i)));
     for j=2:3
         if ~isempty(netvals{j-1})
-            Networks{i,j}=netvals{j-1};
+            Networksall{i,j}=netvals{j-1};
         else
-            Networks{i,j}=Inf;
+            Networksall{i,j}=Inf;
         end        
     end
     i=i+1;
@@ -140,7 +144,7 @@ end
 
 
 for i=1:Noutputs
-M(i)=max(D{2}(i,:))*10;  %M1 related to maximum good demand (an order of magnitude higher
+M(i)=max(Dall{2}(i,:))*10;  %M1 related to maximum good demand (an order of magnitude higher
 end
 Mbigspare=max(M);
 
@@ -153,44 +157,44 @@ Mbigspare=max(M);
 
 %Setting exchange limits on various networks: limit might be set by user or
 %will be set to big M of network good
-for i=1:size(Networks,1)      
-    if ~isnumeric(Networks{i,2})||~isfinite(Networks{i,2})  %if limit for exchange is infinite or not a number
-        if all(~(strcmp(D{1},Networks{i,1})))~=0
-            Networks{i,2}=M(strcmp(D{1},Networks{i,1}));
+for i=1:size(Networksall,1)      
+    if ~isnumeric(Networksall{i,2})||~isfinite(Networksall{i,2})  %if limit for exchange is infinite or not a number
+        if all(~(strcmp(Dall{1},Networksall{i,1})))~=0
+            Networksall{i,2}=M(strcmp(Dall{1},Networksall{i,1}));
         else
-            Networks{i,2}=Mbigspare;
+            Networksall{i,2}=Mbigspare;
         end
     end
-    if ~isnumeric(Networks{i,3})||~isfinite(Networks{i,3})  %if limit for exchange is infinite or not a number
-        if all(~(strcmp(D{1},Networks{i,1})))~=1
-            Networks{i,3}=M(strcmp(D{1},Networks{i,1}));
+    if ~isnumeric(Networksall{i,3})||~isfinite(Networksall{i,3})  %if limit for exchange is infinite or not a number
+        if all(~(strcmp(Dall{1},Networksall{i,1})))~=1
+            Networksall{i,3}=M(strcmp(Dall{1},Networksall{i,1}));
         else
-            Networks{i,3}=Mbigspare;
+            Networksall{i,3}=Mbigspare;
         end
     end
 end
 
-Nnetworks=size(Networks,1);
+Nnetworks=size(Networksall,1);
 
 
 x=find(~cellfun(@isempty,Pricetags(1,:)));  %check whether we have both networks and fuels
 
 if length(x)==2         %both fuels and networks
     for i=1:x(2)-1      %these are the fuels and the prices
-        Fuels{i,1}=Pricetags(2,i);
-        Fuels{i,2}=Prices(:,i);
+        Fuelsall{i,1}=Pricetags(2,i);
+        Fuelsall{i,2}=Prices(:,i);
     end
     for i=1:Nnetworks
-        a=find(strcmp(Networks{i,1},Pricetags(2,x(2):end)))-1; %column for pricing of network i
-        Networks{i,4}=Prices(:,x(2)+a);
-        Networks{i,5}=Prices(:,x(2)+a+1);
+        a=find(strcmp(Networksall{i,1},Pricetags(2,x(2):end)))-1; %column for pricing of network i
+        Networksall{i,4}=Prices(:,x(2)+a);
+        Networksall{i,5}=Prices(:,x(2)+a+1);
     end
 else                                    %only fuel prices
     for i=1:length(Pricetags(2,:))      %these are the fuels and the prices
-        Fuels{i,1}=Pricetags(2,i);
-        Fuels{i,2}=Prices(:,i);
+        Fuelsall{i,1}=Pricetags(2,i);
+        Fuelsall{i,2}=Prices(:,i);
     end
 end   
-Nfuels=size(Fuels,2);
+Nfuels=size(Fuelsall,2);
 
 system('taskkill /F /IM EXCEL.EXE');

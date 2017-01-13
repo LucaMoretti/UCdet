@@ -182,7 +182,7 @@ if Nnetworks~=0
     Constr=[Constr NETWORKsold >= 0];
     for i=1:Nnetworks
         %Setting big M in accordance with good of network (if possible)
-        if all(~(strcmp(D{1},Networks{i,1})))~=0
+        if all(~(strcmp(D{1},Networks{i,1})))==0
             maxsold=min(M(strcmp(D{1},Networks{i,1})),Networks{i,3}); %check if there are more restrictive limits on exchange with network
             maxbought=min(M(strcmp(D{1},Networks{i,1})),Networks{i,2});
         else
@@ -253,30 +253,21 @@ end
 
 
 %Consider or not storage and network in balance for each good
-store=zeros(Noutputs,1);
-net=zeros(Noutputs,1);
-ind=0;
+store=ismember(Outputs(:),Storages(:,1));
+net=ismember(Outputs(:),Networks(:,1));
+
 for j=1:Noutputs
-    for h=1:Nstorages
-        if isequal(Storages{h,1},Outputs{j})
-            store(j)=1;
-            break           %this way h keeps track of which row in Storages we should consider
-        end
-    end
-    for k=1:Nnetworks
-        if isequal(Networks{k,1},Outputs{j})
-            net(j)=1;
-            ind=ind+1;
-            break           %this way k keeps track of which row in Networks we should consider
-        end
-    end
     %balances in each scenario
     if store(j)==1&&net(j)==1
-        Constr=[Constr [netprod(j,:) + STORAGEpower(h,:) + NETWORKbought(ind,:) - NETWORKsold(ind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
+        [~,~,netind]=intersect(Outputs(j),Networks(:,1));
+        [~,~,storeind]=intersect(Outputs(j),Storages(:,1));
+        Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + NETWORKbought(netind,:) - NETWORKsold(netind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
     elseif store(j)==1&&net(j)==0
-        Constr=[Constr [netprod(j,:) + STORAGEpower(h,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
+        [~,~,storeind]=intersect(Outputs(j),Storages(:,1));
+        Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
     elseif store(j)==0&&net(j)==1
-        Constr=[Constr [netprod(j,:) + NETWORKbought(ind,:) - NETWORKsold(ind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
+        [~,~,netind]=intersect(Outputs(j),Networks(:,1));
+        Constr=[Constr [netprod(j,:) + NETWORKbought(netind,:) - NETWORKsold(netind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
     else
         Constr=[Constr [netprod(j,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
     end
@@ -324,14 +315,8 @@ waitbar(0.6,han,'Problem Solution')
 %%%%%%%%%%%%%%%%%%%%%%
 % OBJECTIVE FUNCTION %
 %%%%%%%%%%%%%%%%%%%%%%
-[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
-Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*timestep)))+sum(sum([Networks{costorder,4}]'.*(NETWORKbought.*timestep)))-sum(sum([Networks{costorder,5}]'.*(NETWORKsold.*timestep)))+sum(slackcost*slacks);
+%[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
+Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*timestep)))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*timestep)))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*timestep)))+sum(slackcost*slacks);
 
 
-%%%%%%%%%%%%%%%%%%%%
-% PROBLEM SOLUTION %
-%%%%%%%%%%%%%%%%%%%%
-tic
-ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005);
-sol=optimize(Constr,Objective,ops)
-toc
+
