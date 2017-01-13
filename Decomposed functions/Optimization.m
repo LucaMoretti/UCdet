@@ -4,12 +4,28 @@ if suppresswarning==1
     warning('off','all')
 end
 
-%%ATTIVA CONTROLLO CONVESSITà 
-convcheck=true;
-
 
 %Binary variables for machines
 Z=binvar(Nmachines,ntimes); 
+%On/Off hystory
+OnOffHist=binvar(Nmachines,histdepth); 
+D{2}=sdpvar(size(Dall{1},1),ntimes);
+for h=1:size(Fuels,1)
+    Fuels{h,2}=sdpvar(ntimes,1);
+end
+for h=1:size(Networks,1)
+    Networks{h,4}=sdpvar(ntimes,1);
+    Networks{h,5}=sdpvar(ntimes,1);
+end   
+if Nundisp~=0
+    for h=1:size(UndProd,1)
+        UndProd{h,3}=sdpvar(size(UndProd{h,3},1),ntimes);    
+    end
+else
+    UndProd=cell(1,3);
+    UndProd{1,3}=sdpvar(1,1);
+end
+    
 
 
 %Storages variables
@@ -219,7 +235,7 @@ for i=1:Noutputs
     %each producer/consumer and each timestep
     machcons{i}=sdpvar(ncons,ntimes);
     machprod{i}=sdpvar(nprod,ntimes);
-    undmachprod{i}=zeros(1,ntimes);
+    if Nundisp~=0; undmachprod{i}=sdpvar(sum(ismember([UndProd{:,2}],Outputs(i))) ,ntimes); end
 end
 
 for j=1:Noutputs
@@ -243,12 +259,16 @@ for j=1:Noutputs
         %Production by undispatchable machine i of good j
         if ismember(Outputs(j),UndProd{i,2})
             f=f+1;
-            undmachprod{j}(f,:)=UndProd{i,3}(ismember(UndProd{i,2},Outputs(j)),:);
+            Constr=[Constr undmachprod{j}(f,:)==UndProd{i,3}(ismember(UndProd{i,2},Outputs(j)),:)];
         end
     end
     
-    Constr=[Constr netprod(j,:)==sum(machprod{j},1)+sum(undmachprod{j},1)-sum(machcons{j},1)];
-
+    if Nundisp~=0
+        Constr=[Constr netprod(j,:)==sum(machprod{j},1)+sum(undmachprod{j},1)-sum(machcons{j},1)];
+    else
+        Constr=[Constr netprod(j,:)==sum(machprod{j},1)-sum(machcons{j},1)];
+    end
+    
 end
 
 
@@ -318,5 +338,11 @@ waitbar(0.6,han,'Problem Solution')
 %[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
 Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*timestep)))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*timestep)))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*timestep)))+sum(slackcost*slacks);
 
+Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist};
+Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Z(:,(end-histdepth+1):end) fuelusage UndProd{:,3}};
 
+ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',2);
+Model=optimizer(Constr,Objective,ops,Param,Outs);
+
+%sol=optimize(Constr,Objective,ops)
 

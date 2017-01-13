@@ -28,26 +28,26 @@ for i=1:Noutputs
     for j=1:Nmachines
         %Production by machine i of good j
         for h=1:numel(Machines{j,3})
-            if isequal(Outputs(i),Machines{j,3}(h)) && sum(value(OUTPUT{j}(h,:)))>1e-6
+            if isequal(Outputs(i),Machines{j,3}(h)) && sum((OUTPUT{j}(h,:)))>1e-6
                 if f==0
                     Pmat{i,2}=Machines{j,1};
-                    Pmat{i,3}=[value(OUTPUT{j}(h,:))];
+                    Pmat{i,3}=[(OUTPUT{j}(h,:))];
                 else
                     Pmat{i,2}=[Pmat{i,2};Machines{j,1}];
-                    Pmat{i,3}=[Pmat{i,3};value(OUTPUT{j}(h,:))];
+                    Pmat{i,3}=[Pmat{i,3};(OUTPUT{j}(h,:))];
                 end
                 f=f+1;
             end
         end
         %Consumption by machine i of good j
         for h=1:numel(Machines{j,2})
-            if isequal(Outputs(i),Machines{j,2}(h)) && sum(value(INPUT{j}(h,:)))~=0
+            if isequal(Outputs(i),Machines{j,2}(h)) && sum((INPUT{j}(h,:)))~=0
                 if l==0
                     Pmat{i,12}=Machines{j,1};
-                    Pmat{i,13}=[value(INPUT{j}(h,:))];
+                    Pmat{i,13}=[(INPUT{j}(h,:))];
                 else
                     Pmat{i,12}=[Pmat{i,12};Machines{j,1}];
-                    Pmat{i,13}=[Pmat{i,13};value(INPUT{j}(h,:))];
+                    Pmat{i,13}=[Pmat{i,13};(INPUT{j}(h,:))];
                 end
                 l=l+1;
             end
@@ -83,13 +83,13 @@ for i=1:Noutputs
         C(6)=1;
         if Storages{nstor,7}~=0
             C(7)=1;
-            Pmat{i,14}=value(STORAGEcharge(nstor,:))*Storages{nstor,7};
+            Pmat{i,14}=(STORAGEcharge(nstor,:))*Storages{nstor,7};
         end
-        Storprof=value(STORAGEpower(nstor,:));
+        Storprof=(STORAGEpower(nstor,:));
         Storprof(Storprof>=0)=0;
-        Pmat{i,4}(1:ntimes)=value(STORAGEpower(nstor,:))-Storprof;
+        Pmat{i,4}(1:ntimes)=(STORAGEpower(nstor,:))-Storprof;
         Pmat{i,5}(1:ntimes)=Storprof;
-        Pmat{i,9}=value(STORAGEcharge(nstor,:));
+        Pmat{i,9}=(STORAGEcharge(nstor,:));
         if Storages{nstor,4}~=1
             C(8)=1;
             Pmat{i,15}=Pmat{i,5}*(1-Storages{nstor,4});
@@ -101,19 +101,19 @@ for i=1:Noutputs
     end
     if sum(strcmp({Networks{:,1}},Outputs{i}))>0
         [~,~,nnet]=intersect(Outputs(i),Networks(:,1));
-        if sum(value(NETWORKbought(nnet,:)))>1e-6
+        if sum((NETWORKbought(nnet,:)))>1e-6
             C(2)=1;
-            Pmat{i,6}(1:ntimes)=value(NETWORKbought(nnet,:));
+            Pmat{i,6}(1:ntimes)=(NETWORKbought(nnet,:));
         end
-        if sum(value(NETWORKsold(nnet,:)))>1e-6
+        if sum((NETWORKsold(nnet,:)))>1e-6
             C(4)=1;
-            Pmat{i,7}(1:ntimes)=value(NETWORKsold(nnet,:));
+            Pmat{i,7}(1:ntimes)=(NETWORKsold(nnet,:));
         end
     end
     
 
-    Pmat{i,8}(1:ntimes)=value(Diss(i,:));
-    if abs(sum(value(Diss(i,:))))>0.001
+    Pmat{i,8}(1:ntimes)=(Diss(i,:));
+    if abs(sum((Diss(i,:))))>0.001
         C(5)=1;
     end
     L{i}=C;
@@ -127,36 +127,36 @@ costvals={};
 gainvals={};
 
 for i=1:Nmachines
-    if ismember(Machines{i,2},[Fuels{:,1}])&&sum(value(INPUT{i}))>1e-6
+    if ismember(Machines{i,2},[Fuels{:,1}])&&sum((INPUT{i}))>1e-6
         cont=cont+1;
         tags{cont}=strcat(Machines{i,1},' fuel');
-        costvals{cont}=value(INPUT{i})'.*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
+        costvals{cont}=(INPUT{i})'.*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
     end
 end
 for i=1:Nnetworks
-    if sum(value(NETWORKbought(i,:)))>0
+    if sum((NETWORKbought(i,:)))>0
         cont=cont+1;
         tags{cont}=strcat(Networks{i,1}, 'bought from network');
-        costvals{cont}=value(NETWORKbought(i,:)').*Networks{i,4};
+        costvals{cont}=(NETWORKbought(i,:)').*Networks{i,4};
     end
 end
 for i=1:Nnetworks
-    if sum(value(NETWORKsold(i,:)))>0
+    if sum((NETWORKsold(i,:)))>0
         can=can+1;
         cont=cont+1;
         tags{cont}=strcat(Networks{i,1}, 'sold on network');
-        gainvals{can}=value(NETWORKsold(i,:)').*Networks{i,5};
+        gainvals{can}=(NETWORKsold(i,:)').*Networks{i,5};
     end
 end
 for i=1:Noutputs
-    if sum(value(slacks(i,:))) > 0
+    if sum((slacks(i,:))) > 0
         cont=cont+1;
         tags{cont}=strcat(Outputs{i}, ' unmet demand');
-        costvals{cont}=value(slacks(i,:))'.*slackcost(i);
+        costvals{cont}=(slacks(i,:))'.*slackcost(i);
     end
 end
 
-Obj=value((sum([Fuels{:,2}]'.*(fuelusage.*timestep),1))+(sum([Networks{:,4}]'.*(NETWORKbought.*timestep),1))-(sum([Networks{:,5}]'.*(NETWORKsold.*timestep),1)));
+Obj=((sum([Fuels{:,2}]'.*(fuelusage.*timestep),1))+(sum([Networks{:,4}]'.*(NETWORKbought.*timestep),1))-(sum([Networks{:,5}]'.*(NETWORKsold.*timestep),1)));
 
 elseif symtype == 2
    
@@ -167,16 +167,16 @@ for i=1:Noutputs
     for j=1:Nmachines
         %Production by machine i of good j
         for h=1:numel(Machines{j,3})
-            if isequal(Outputs(i),Machines{j,3}(h)) %&& sum(value(OUTPUT{j}(h,:)))>1e-6  %condizione da rivedere anche in fase creazione matrice
+            if isequal(Outputs(i),Machines{j,3}(h)) %&& sum((OUTPUT{j}(h,:)))>1e-6  %condizione da rivedere anche in fase creazione matrice
                 f=f+1;
-                Pmat{i,3}(f,pos)=[value(OUTPUT{j}(h,:))];
+                Pmat{i,3}(f,pos)=[(OUTPUT{j}(h,:))];
             end
         end
         %Consumption by machine i of good j
         for h=1:numel(Machines{j,2})
-            if isequal(Outputs(i),Machines{j,2}(h)) %&& sum(value(INPUT{j}(h,:)))~=0     %condizione da rivedere
+            if isequal(Outputs(i),Machines{j,2}(h)) %&& sum((INPUT{j}(h,:)))~=0     %condizione da rivedere
                 l=l+1;
-                Pmat{i,13}(l,pos)=[value(INPUT{j}(h,:))];
+                Pmat{i,13}(l,pos)=[(INPUT{j}(h,:))];
             end
         end
     end
@@ -193,13 +193,13 @@ for i=1:Noutputs
     if ismember(Outputs{i},{Storages{:,1}}) %strcmp({Storages{:,1}},Outputs{i}))>0 
         nstor=ismember({Storages{:,1}},Outputs{i});
         if Storages{nstor,7}~=0
-            Pmat{i,14}(pos)=value(STORAGEcharge(nstor,:))*Storages{nstor,7};
+            Pmat{i,14}(pos)=(STORAGEcharge(nstor,:))*Storages{nstor,7};
         end
-        Storprof=value(STORAGEpower(nstor,:));
+        Storprof=(STORAGEpower(nstor,:));
         Storprof(Storprof>=0)=0;
-        Pmat{i,4}(pos)=value(STORAGEpower(nstor,:))-Storprof;
+        Pmat{i,4}(pos)=(STORAGEpower(nstor,:))-Storprof;
         Pmat{i,5}(pos)=Storprof;
-        Pmat{i,9}(pos)=value(STORAGEcharge(nstor,:));
+        Pmat{i,9}(pos)=(STORAGEcharge(nstor,:));
         if Storages{nstor,4}~=1
             Pmat{i,15}(pos)=Pmat{i,5}(pos)*(1-Storages{nstor,4});
         end
@@ -209,16 +209,16 @@ for i=1:Noutputs
     end
     if sum(strcmp({Networks{:,1}},Outputs{i}))>0
         [~,~,nnet]=intersect(Outputs(i),Networks(:,1));
-        if sum(value(NETWORKbought(nnet,:)))>1e-6       %condizione da rivedere
-            Pmat{i,6}(pos)=value(NETWORKbought(nnet,:));
+        if sum((NETWORKbought(nnet,:)))>1e-6       %condizione da rivedere
+            Pmat{i,6}(pos)=(NETWORKbought(nnet,:));
         end
-        if sum(value(NETWORKsold(nnet,:)))>1e-6         %condizione da rivedere
-            Pmat{i,7}(pos)=value(NETWORKsold(nnet,:));
+        if sum((NETWORKsold(nnet,:)))>1e-6         %condizione da rivedere
+            Pmat{i,7}(pos)=(NETWORKsold(nnet,:));
         end
 end
     
 
-    Pmat{i,8}(pos)=value(Diss(i,:));
+    Pmat{i,8}(pos)=(Diss(i,:));
     if abs(sum(Pmat{i,8}))>0.001
         C(5)=1;
     end
@@ -230,31 +230,31 @@ cont=0;
 can=0;
 
 for i=1:Nmachines
-    if ismember(Machines{i,2},[Fuels{:,1}]) &&sum(value(INPUT{i}))>1e-6         %condizione da ritoccare
+    if ismember(Machines{i,2},[Fuels{:,1}]) &&sum((INPUT{i}))>1e-6         %condizione da ritoccare
         cont=cont+1;
-        costvals{cont}(pos)=value(INPUT{i})'.*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
+        costvals{cont}(pos)=(INPUT{i})'.*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
     end
 end
 for i=1:Nnetworks
-    if sum(value(NETWORKbought(i,:)))>0
+    if sum((NETWORKbought(i,:)))>0
         cont=cont+1;
-        costvals{cont}(pos)=value(NETWORKbought(i,:)').*Networks{i,4};
+        costvals{cont}(pos)=(NETWORKbought(i,:)').*Networks{i,4};
     end
 end
 for i=1:Nnetworks
-    if sum(value(NETWORKsold(i,:)))>0
+    if sum((NETWORKsold(i,:)))>0
         can=can+1;
         cont=cont+1;
-        gainvals{can}(pos)=value(NETWORKsold(i,:)').*Networks{i,5};
+        gainvals{can}(pos)=(NETWORKsold(i,:)').*Networks{i,5};
     end
 end
 for i=1:Noutputs
-    if sum(value(slacks(i,:))) > 0
+    if sum((slacks(i,:))) > 0
         cont=cont+1;
-        costvals{cont}(pos)=(value(slacks(i,:))'.*slackcost(i))';
+        costvals{cont}(pos)=((slacks(i,:))'.*slackcost(i))';
     end
 end
 
-Obj=[Obj value((sum([Fuels{:,2}]'.*(fuelusage.*timestep),1))+(sum([Networks{:,4}]'.*(NETWORKbought.*timestep),1))-(sum([Networks{:,5}]'.*(NETWORKsold.*timestep),1)))];
+Obj=[Obj ((sum([Fuels{:,2}]'.*(fuelusage.*timestep),1))+(sum([Networks{:,4}]'.*(NETWORKbought.*timestep),1))-(sum([Networks{:,5}]'.*(NETWORKsold.*timestep),1)))];
 
 end

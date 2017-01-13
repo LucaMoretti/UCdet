@@ -17,6 +17,7 @@ if ~isempty(range)
     x(end+1)=length(Undispnames(2,:))+1;
 else
     Nundisp=0;
+    UndProdall=cell(1,1);
 end
 [~,range]=xlsread(Filepath,'Prices','pricerange');
 [Prices,Pricetags]=xlsread(Filepath,'Prices',range{1});
@@ -75,6 +76,8 @@ end
 exclusivetags=unique(flagsvector(flagsvector~=0));
 exclusivegroups=length(exclusivetags);
 
+a=cellfun(@(x) x(:,3:4),Machines(:,7),'UniformOutput',false);
+histdepth=ceil(max([a{:}])/timestep);                                          %already in number of timesteps
 
 %Inputs lists all possible machine inputs. 
 Inputs=[Machines{:,2}];
