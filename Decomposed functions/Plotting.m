@@ -1,5 +1,81 @@
-%% Plot
+%% PREPROCESSING OF DATA MATRIXES AND PLOTTING OF ALL RELEVANT CHARTS
 
+
+%Pmat preprocessing (if symtype~=1)
+if symtype~=1
+    for i=1:Noutputs
+       %disp check
+        h=0;
+        for j=1:size(Pmat{i,3},1)
+            h=h+1;
+            if sum(Pmat{i,3}(h,:))<1e-2
+                Pmat{i,2}(h,:)=[];
+                Pmat{i,3}(h,:)=[];
+                h=h-1;
+            end
+        end
+        %Network usage control
+        if sum(Pmat{i,6})>1e-2
+            L{i}(2)=1;
+        else
+            Pmat{i,6}=[];
+        end
+        if sum(Pmat{i,7})>1e-2
+            L{i}(4)=1;
+        else
+            Pmat{i,7}=[];
+        end
+        %Dissipation check
+        if sum(Pmat{i,8})>1e-2
+            L{i}(5)=1;
+        else
+            Pmat{i,8}=[];
+        end
+        %undisp check
+        h=0;
+        for j=1:size(Pmat{i,11},1)
+            h=h+1;
+            if sum(Pmat{i,11}(h,:))<1e-2
+                Pmat{i,10}(h,:)=[];
+                Pmat{i,11}(h,:)=[];
+                h=h-1;
+            end
+        end
+        %cons check
+        h=0;
+        for j=1:size(Pmat{i,13},1)
+            h=h+1;
+            if sum(Pmat{i,13}(h,:))<1e-2
+                Pmat{i,12}(h,:)=[];
+                Pmat{i,13}(h,:)=[];
+                h=h-1;
+            end
+        end
+    end
+h=0;
+l=0;
+for i=1:size(costvals,2)
+    h=h+1;
+    if sum(costvals{h})<1e-2
+        tags(h)=[];
+        costvals(h)=[];
+        h=h-1;
+    end
+end
+for i=1:size(gainvals,2)
+    l=l+1;
+    h=h+1;
+    if sum(gainvals{l})<1e-2
+       tags(h)=[];
+       gainvals(l)=[];
+       h=h-1;
+       l=l-1;
+    end 
+end     
+end
+
+        
+        
 
 
 grey = [0.4,0.4,0.4];
@@ -110,10 +186,10 @@ end
 
 figure()
 hold on
-h=bar([costvals{:}],1,'stacked');              %ESS energy level 
+h=bar(cell2mat(costvals')',1,'stacked');              
 color=parula(max(size(costvals,2),8));
 %color=copper(size(prodnames,1)+10);
-for j=1:size([costvals{:}],2)
+for j=1:size(cell2mat(costvals')',2)
     set(h(j),'facecolor',color(j,:));
 end
 if can~=0

@@ -77,7 +77,7 @@ exclusivetags=unique(flagsvector(flagsvector~=0));
 exclusivegroups=length(exclusivetags);
 
 a=cellfun(@(x) x(:,3:4),Machines(:,7),'UniformOutput',false);
-histdepth=ceil(max([a{:}])/timestep);                                          %already in number of timesteps
+histdepth=ceil(max([a{:}])/timestep)-1;                                          %already in number of timesteps
 
 %Inputs lists all possible machine inputs. 
 Inputs=[Machines{:,2}];
@@ -108,29 +108,31 @@ Noutputs=size(Outputs,2);
 %column10 --> storage initial condition (== final condition)
 
 %sarebbe bello avere reference variabile su inizio nomi storage ma vabbè
-i=1;
-[~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(2+i)));
+i=0;
+Storages={[]};
+[~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(3+i)));
 while ~isempty(storname)
+    i=i+1;
     Storages(i,1)=storname;
     storvals=xlsread(Filepath,'Stor&Net',strcat('B',num2str(2+i),':J',num2str(2+i)));
     for j=2:10
         Storages{i,j}=storvals(j-1);
     end
-    i=i+1;
     [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(2+i)));
 end    
 
  
-Nstorages=size(Storages,1);
+Nstorages=i;
 
-
+Networksall={[] [] [] 0 0};
 %Networks data: 
 %column1 --> network's good
 %column2 --> max withdrawal rate
 %column3 --> max injection rate
-i=1;
-[k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(2+i)));
+i=0;
+[k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
 while ~isempty(netname)
+    i=i+1;
     Networksall(i,1)=netname;
     netvals{1}=xlsread(Filepath,'Stor&Net',strcat('M',num2str(2+i),':M',num2str(2+i)));
     netvals{2}=xlsread(Filepath,'Stor&Net',strcat('N',num2str(2+i),':N',num2str(2+i)));
@@ -141,10 +143,11 @@ while ~isempty(netname)
             Networksall{i,j}=Inf;
         end        
     end
-    i=i+1;
-    [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(2+i)));
+    
+    [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
 end    
 
+Nnetworks=i;
 
 for i=1:Noutputs
 M(i)=max(Dall{2}(i,:))*10;  %M1 related to maximum good demand (an order of magnitude higher
@@ -160,7 +163,7 @@ Mbigspare=max(M);
 
 %Setting exchange limits on various networks: limit might be set by user or
 %will be set to big M of network good
-for i=1:size(Networksall,1)      
+for i=1:Nnetworks      
     if ~isnumeric(Networksall{i,2})||~isfinite(Networksall{i,2})  %if limit for exchange is infinite or not a number
         if all(~(strcmp(Dall{1},Networksall{i,1})))~=0
             Networksall{i,2}=M(strcmp(Dall{1},Networksall{i,1}));
@@ -177,7 +180,7 @@ for i=1:size(Networksall,1)
     end
 end
 
-Nnetworks=size(Networksall,1);
+
 
 
 x=find(~cellfun(@isempty,Pricetags(1,:)));  %check whether we have both networks and fuels
@@ -198,6 +201,6 @@ else                                    %only fuel prices
         Fuelsall{i,2}=Prices(:,i);
     end
 end   
-Nfuels=size(Fuelsall,2);
+Nfuels=size(Fuelsall,1);
 
 system('taskkill /F /IM EXCEL.EXE');
