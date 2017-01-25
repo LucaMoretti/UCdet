@@ -162,6 +162,8 @@ elseif symtype==3
     tstart=1;    
     ntimes=roltsteps;
     
+    coeffs=cellfun(@(x) x(tstart:(tstart+roltsteps-1)),{Machines{:,8}},'UniformOutput',false);
+    
     %Preliminary variables initialization (required to understand variables structure)
     D(2) = cellfun(@(x) x(:,tstart:(tstart+roltsteps-1)),Dall(2),'UniformOutput',false);
     Fuels(:,2) = cellfun(@(x) x(tstart:(tstart+roltsteps-1),:),Fuelsall(:,2),'UniformOutput',false);
@@ -188,6 +190,7 @@ elseif symtype==3
     runcount=0;
     
     while (ntimestot-tstart)>roltsteps;
+        
    
         runcount=runcount+1;
         %Implementation of parameters values for current simulation instance
@@ -205,11 +208,11 @@ elseif symtype==3
             Networks{:,4}=0;
             Networks{:,5}=0;
         end
-        actualcoeffs=cellfun(@(x) x(tstart:(tstart+roltsteps-1)),{Machines{:,8}},'UniformOutput',false);
-        actualcoeffs=[actualcoeffs{:}];
+        coeffs=cellfun(@(x) x(tstart:(tstart+roltsteps-1)),{Machines{:,8}},'UniformOutput',false);
+        %actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
-        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:}};
-%                 Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
+%         Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:}};
+        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
         %Problem solution and data gathering
         Solution
         DataGathering        
