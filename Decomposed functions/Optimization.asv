@@ -404,11 +404,10 @@ else
 end
 
 prova=[coeffs{:}];
-Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coeffs{1}{:}};
-% Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
-Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,(roladvance+1):(roladvance+histdepth)) fuelusage Zext indicator alfas{:} betas{:}};
+Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart prova{:}};
+Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,(roladvance+1):(roladvance+histdepth)) fuelusage Zext indicator alfas betas};
 
-ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
+ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',2);
 Model=optimizer(Constr,Objective,ops,Param,Outs);
 
 %sol=optimize(Constr,Objective,ops)
