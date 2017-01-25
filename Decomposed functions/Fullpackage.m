@@ -176,6 +176,7 @@ elseif symtype==3
     end
     %Creation of problem structure
     convexflag=zeros(Nmachines,1);
+    coeffs=cellfun(@(x) x(tstart:(tstart+roltsteps-1)),{Machines{:,8}},'UniformOutput',false);
     Optimization
     OnOffHist=zeros(Nmachines,histdepth);
     LastProd=zeros(1,Nmachines);
@@ -205,16 +206,24 @@ elseif symtype==3
             Networks{:,4}=0;
             Networks{:,5}=0;
         end
-        actualcoeffs=cellfun(@(x) x(tstart:(tstart+roltsteps-1)),{Machines{:,8}},'UniformOutput',false);
-        actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
-        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:}};
-%                 Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
+%         Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:}};
+        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
         %Problem solution and data gathering
         Solution
         DataGathering        
         %starting time update update
         tstart=tstart+roladvance;   
+        
+        OnOffHisttemp=OnOffHist;
+        LastProdtemp=LastProd;
+        temp=STORstart;
+        coeffs=cellfun(@(x) x(tstart:(tstart+roltsteps-1)),{Machines{:,8}},'UniformOutput',false);
+        Optimization    
+        STORstart=temp;
+        OnOffHist=OnOffHisttemp;
+        LastProd=LastProdtemp;
+        
     end
     
     %while tstart<=ntimestot
@@ -247,6 +256,7 @@ elseif symtype==3
         OnOffHisttemp=OnOffHist;
         LastProdtemp=LastProd;
         temp=STORstart;
+        coeffs=cellfun(@(x) x(tstart:(tstart+ntimes-1)),{Machines{:,8}},'UniformOutput',false);
         Optimization    
         STORstart=temp;
         OnOffHist=OnOffHisttemp;
@@ -266,10 +276,8 @@ elseif symtype==3
             Networks{:,4}=0;
             Networks{:,5}=0;
         end
-        actualcoeffs=cellfun(@(x) x(tstart:(tstart+ntimes-1)),{Machines{:,8}},'UniformOutput',false);
-        actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
-        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:}};
+        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
         %Problem solution and data gathering
         Solution
         DataGathering   

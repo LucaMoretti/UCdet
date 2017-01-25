@@ -74,8 +74,8 @@ Constr = slacks >= 0;
 for i=1:Nmachines
     INPUT{i}=sdpvar(numel(Machines{i,2}),ntimes,'full');           %Input variables for each machine
     OUTPUT{i}=sdpvar(numel(Machines{i,3}),ntimes,'full');           %Output variables for each machine
-    coeffs{i}=cell(ntimes,1);
-    [coeffs{i}{:}]=deal(sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3})));    %coefficients of operating points, variables since they will depend on T
+    %coeffs{i}=cell(ntimes,1);
+    %[coeffs{i}{:}]=deal(sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3})));    %coefficients of operating points, variables since they will depend on T
     %J(i)=size(Machines{i,4},1);                                 %Number of sampled points
 
     %Convexity check
@@ -403,9 +403,9 @@ else
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*timestep)))+sum(slackcost*slacks);
 end
 
-prova=[coeffs{:}];
-Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coeffs{1}{:}};
-% Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
+% prova=[coeffs{:}];
+% Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coeffs{1}{:}};
+Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
 Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,(roladvance+1):(roladvance+histdepth)) fuelusage Zext indicator alfas{:} betas{:}};
 
 ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
