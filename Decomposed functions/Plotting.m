@@ -186,16 +186,17 @@ end
 
 figure()
 hold on
-h=bar(cell2mat(costvals')',1,'stacked');              
+%h=bar(cell2mat(costvals')',1,'stacked');   
+h=bar([costvals{:}],1,'stacked');   
 color=parula(max(size(costvals,2),8));
 %color=copper(size(prodnames,1)+10);
-for j=1:size(cell2mat(costvals')',2)
+for j=1:size(costvals,2)
     set(h(j),'facecolor',color(j,:));
 end
 if can~=0
     k=bar(-[gainvals{:}],1,'stacked');
     color=hot(max(size(gainvals,2),8));
-    for j=1:size([gainvals{:}],2)
+    for j=1:size(gainvals,2)
         set(k(j),'facecolor',color(j,:));
     end
 end

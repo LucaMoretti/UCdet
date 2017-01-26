@@ -351,7 +351,7 @@ for i=1:Noutputs
         for h=1:numel(UndProd{j,2})
             if isequal(Outputs(i),UndProd{j,2}(h)) %&& sum(UndProd{j,3}(h,:))~=0
                 f=f+1;
-                Pmat{i,11}(f,pos)=UndProd{j,3}(h,:);
+                Pmat{i,11}(f,pos)=UndProd{j,3}(h,1:numsaves);
             end
         end
     end

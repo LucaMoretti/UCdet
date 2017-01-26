@@ -77,7 +77,7 @@ exclusivetags=unique(flagsvector(flagsvector~=0));
 exclusivegroups=length(exclusivetags);
 
 a=cellfun(@(x) x(:,3:4),Machines(:,7),'UniformOutput',false);
-histdepth=ceil(max([a{:}])/timestep)-1;                                          %already in number of timesteps
+histdepth=ceil(max([a{:}])/timestep);                                          %already in number of timesteps
 
 %Inputs lists all possible machine inputs. 
 Inputs=[Machines{:,2}];
@@ -118,7 +118,7 @@ while ~isempty(storname)
     for j=2:10
         Storages{i,j}=storvals(j-1);
     end
-    [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(2+i)));
+    [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(3+i)));
 end    
 
  
