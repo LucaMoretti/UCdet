@@ -212,10 +212,10 @@ for i=1:Noutputs
             if isequal(Outputs(i),UndProd{j,2}(h)) %&& sum(UndProd{j,3}(h,:))~=0
                 if f==0
                     Pmat{i,10}=UndProd{j,1};
-                    Pmat{i,11}=UndProd{j,3}(h,:);
+                    Pmat{i,11}=UndProd{j,3}(h,1:numsaves);
                 else
                     Pmat{i,10}=[Pmat{i,10};UndProd{j,1}];
-                    Pmat{i,11}=[Pmat{i,11};UndProd{j,3}(h,:)];
+                    Pmat{i,11}=[Pmat{i,11};UndProd{j,3}(h,1:numsaves)];
                 end
                 f=f+1;
             end
@@ -351,7 +351,7 @@ for i=1:Noutputs
         for h=1:numel(UndProd{j,2})
             if isequal(Outputs(i),UndProd{j,2}(h)) %&& sum(UndProd{j,3}(h,:))~=0
                 f=f+1;
-                Pmat{i,11}(f,pos)=UndProd{j,3}(h,:);
+                Pmat{i,11}(f,pos)=UndProd{j,3}(h,1:numsaves);
             end
         end
     end
@@ -398,20 +398,20 @@ for i=1:Nmachines
     if ismember(Machines{i,2},[Fuels{:,1}]) %&&sum((INPUT{i}))>1e-6         %condizione da ritoccare
         cont=cont+1;
         pr=Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
-        costvals{cont}(pos)=(INPUT{i})'.*pr(1:numsaves);
+        costvals{cont}(pos,1)=(INPUT{i})'.*pr(1:numsaves);
     end
 end
 for i=1:Nnetworks
     %if sum((NETWORKbought(i,:)))>0
         cont=cont+1;
         pr=Networks{i,4};
-        costvals{cont}(pos)=(NETWORKbought(i,:)').*pr(1:numsaves);
+        costvals{cont}(pos,1)=(NETWORKbought(i,:)').*pr(1:numsaves);
     %end
 end
 for i=1:Noutputs
     %if sum((slacks(i,:))) > 0
         cont=cont+1;
-        costvals{cont}(pos)=((slacks(i,:))'.*slackcost(i))';
+        costvals{cont}(pos,1)=((slacks(i,:))'.*slackcost(i))';
     %end
 end
 for i=1:Nnetworks
@@ -419,7 +419,7 @@ for i=1:Nnetworks
         can=can+1;
         cont=cont+1;
         pr=Networks{i,5};
-        gainvals{can}(pos)=(NETWORKsold(i,:)').*pr(1:numsaves);
+        gainvals{can}(pos,1)=(NETWORKsold(i,:)').*pr(1:numsaves);
     %end
 end
 

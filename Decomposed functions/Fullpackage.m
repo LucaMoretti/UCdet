@@ -1,5 +1,5 @@
 %% MAIN ROUTINE
-
+tic
 clear
 clc
 
@@ -8,7 +8,7 @@ clc
 % 2 --> contiguous batches
 % 3 --> rolling horizon
 
-symtype = 3;
+symtype = 1;
 
 %DATA FOR SYMTYPE #2
 nbatches = 2;
@@ -18,7 +18,7 @@ roltsteps = 24;
 roladvance = 1;
 
 %%Convexity check on/off 
-convcheck=false;
+convcheck=true;
 
 han = waitbar(0.05,'Simulation initialization');
 ReadExcel
@@ -60,8 +60,12 @@ if symtype==1 || (symtype==3&&roltsteps>=ntimestot)
     if Nstorages~=0
         STORstart=cell2mat(Storages(:,10));
     end
+    actualcoeffs={Machines{:,8}};
+    actualslope=slope(:);
+    actualintercept=intercept(:);
+    actualcoeffs=[actualcoeffs{:}];
     %Creation of parameters input vector
-    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
+    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
     %Problem solution and data gathering
     Solution
     DataGathering
@@ -106,8 +110,12 @@ elseif symtype==2
             UndProd{1,3}=0;
         end
         Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),Networksall(:,4:5),'UniformOutput',false);
+        actualcoeffs=cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),{Machines{:,8}},'UniformOutput',false);
+        actualslope=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),slope(:),'UniformOutput',false);
+        actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(:),'UniformOutput',false);
+        actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
-        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd cell2mat(Storages(:,10))};
+        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd cell2mat(Storages(:,10)) actualcoeffs{:} actualslope{:} actualintercept{:}};
         %Problem solution and data gathering
         Solution
         DataGathering        
@@ -116,26 +124,28 @@ elseif symtype==2
         
     end
     
-    %final run --> we need to recreate the problem since the size of the
+    %final run --> we need to recreate the problem if the size of the
     %simulation has changed!!
     runcount=runcount+1;
     ntimes=tdur(runcount);
-    %Preliminary variables initialization (required to understand variables structure)
-    D(2) = cellfun(@(x) x(:,tstart:(tstart+tdur(runcount)-1)),Dall(2),'UniformOutput',false);
-    Fuels(:,2) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1),:),Fuelsall(:,2),'UniformOutput',false);
-    if Nundisp~=0
-        UndProd(:,3) = cellfun(@(x) x(:,tstart:(tstart+tdur(runcount)-1)),UndProdall(:,3),'UniformOutput',false);
-    else
-        UndProd=cell(1,3);
-        UndProd{1,3}=0;
+    if tdur(end)~=tdur(end-1)
+        %Preliminary variables initialization (required to understand variables structure)
+        D(2) = cellfun(@(x) x(:,tstart:(tstart+tdur(runcount)-1)),Dall(2),'UniformOutput',false);
+        Fuels(:,2) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1),:),Fuelsall(:,2),'UniformOutput',false);
+        if Nundisp~=0
+            UndProd(:,3) = cellfun(@(x) x(:,tstart:(tstart+tdur(runcount)-1)),UndProdall(:,3),'UniformOutput',false);
+        else
+            UndProd=cell(1,3);
+            UndProd{1,3}=0;
+        end
+        Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),Networksall(:,4:5),'UniformOutput',false);
+        %Creation of problem structure
+        OnOffHisttemp=OnOffHist;
+        LastProdtemp=LastProd;
+        Optimization    
+        OnOffHist=OnOffHisttemp;
+        LastProd=LastProdtemp;
     end
-    Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),Networksall(:,4:5),'UniformOutput',false);
-    %Creation of problem structure
-    OnOffHisttemp=OnOffHist;
-    LastProdtemp=LastProd;
-    Optimization    
-    OnOffHist=OnOffHisttemp;
-    LastProd=LastProdtemp;
     %Implementation of parameters values for current simulation instance
     D(2) = cellfun(@(x) x(:,tstart:(tstart+tdur(runcount)-1)),Dall(2),'UniformOutput',false);
     Fuels(:,2) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1),:),Fuelsall(:,2),'UniformOutput',false);
@@ -146,8 +156,12 @@ elseif symtype==2
         UndProd{1,3}=0;
     end
     Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),Networksall(:,4:5),'UniformOutput',false);
+    actualcoeffs=cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),{Machines{:,8}},'UniformOutput',false);
+    actualslope=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),slope(:),'UniformOutput',false);
+    actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(:),'UniformOutput',false);
+    actualcoeffs=[actualcoeffs{:}];
     %Creation of parameters input vector
-    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd cell2mat(Storages(:,10))};
+    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd cell2mat(Storages(:,10)) actualcoeffs{:} actualslope{:} actualintercept{:}};
     %Problem solution and data gathering
     Solution
     DataGathering        
@@ -175,7 +189,6 @@ elseif symtype==3
         Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+roltsteps-1)),Networksall(:,4:5),'UniformOutput',false);
     end
     %Creation of problem structure
-    convexflag=zeros(Nmachines,1);
     Optimization
     OnOffHist=zeros(Nmachines,histdepth);
     LastProd=zeros(1,Nmachines);
@@ -206,9 +219,11 @@ elseif symtype==3
             Networks{:,5}=0;
         end
         actualcoeffs=cellfun(@(x) x(tstart:(tstart+roltsteps-1)),{Machines{:,8}},'UniformOutput',false);
+        actualslope=cellfun(@(x) x(:,:,tstart:(tstart+roltsteps-1)),slope(:),'UniformOutput',false);
+        actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+roltsteps-1)),intercept(:),'UniformOutput',false);
         actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
-        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:}};
+        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
 %                 Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
         %Problem solution and data gathering
         Solution
@@ -217,7 +232,7 @@ elseif symtype==3
         tstart=tstart+roladvance;   
     end
     
-    %while tstart<=ntimestot
+    %while tstart<=ntimestot                    %if data changes it might be better to shrink the horizon until you reach the end of the time horizon
         runcount=runcount+1;
         %final runs --> we need to recreate the problem since the size of the
         %rolling horizon exceeds the simulation horizon!!
@@ -268,8 +283,10 @@ elseif symtype==3
         end
         actualcoeffs=cellfun(@(x) x(tstart:(tstart+ntimes-1)),{Machines{:,8}},'UniformOutput',false);
         actualcoeffs=[actualcoeffs{:}];
+        actualslope=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),slope(:),'UniformOutput',false);
+        actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),intercept(:),'UniformOutput',false);
         %Creation of parameters input vector
-        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:}};
+        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
         %Problem solution and data gathering
         Solution
         DataGathering   
@@ -278,7 +295,10 @@ elseif symtype==3
     
 end
 
+sum(Obj)
+
 waitbar(0.9,han,'Solution plotting')
 Plotting
 waitbar(1,han,'Simulation completed!')
 close(han) 
+toc

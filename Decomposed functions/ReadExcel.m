@@ -122,7 +122,7 @@ Inputs=unique(Inputs, 'Stable');    %Gets rid of duplicates
 
 %All possible outputs (without duplicates)
                                                         %Now defined on the basis of demand profiles, but what if there is an
-                                                        %internal consumption?
+                                                        %internal consumption that you don't see in the demand profiles?
 Outputs=([Dall{:,1}])';
 % Outputs=unique([Machines{:,3}]);                                                          
 
@@ -130,7 +130,23 @@ Noutputs=size(Outputs,2);
 
 %All possible goods (without duplicates)
 % Goods=unique([Inputs Outputs],'stable');
-% Ngoods=size(Goods,2);
+slope=cell(Nmachines,1);
+intercept=cell(Nmachines,1);
+
+% Convexity check
+for i=1:Nmachines
+    for h=1:ntimestot                            %for each time instant
+        for f=1:(J(i)-1)                    %for each segment
+            for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
+                slope{i}(f,k,h)=(Machines{i,8}{h}(f+1,1)-Machines{i,8}{h}(f,1))/(Machines{i,8}{h}(f+1,1+k)-Machines{i,8}{h}(f,1+k));
+                intercept{i}(f,k,h)=Machines{i,8}{h}(f+1,1)-slope{i}(f,k,h)*Machines{i,8}{h}(f+1,1+k);
+            end
+        end
+    end
+    convexflag(i)=all(all(all((slope{i}(2:end,:,:)>=slope{i}(1:(end-1),:,:)))));
+end
+
+
 
 %STORAGE DATA: 
 %column1 --> stored good; 
@@ -155,7 +171,7 @@ while ~isempty(storname)
     for j=2:10
         Storages{i,j}=storvals(j-1);
     end
-    [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(2+i)));
+    [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(3+i)));
 end    
 
  

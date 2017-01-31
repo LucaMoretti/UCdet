@@ -75,46 +75,21 @@ for i=1:Nmachines
     INPUT{i}=sdpvar(numel(Machines{i,2}),ntimes,'full');           %Input variables for each machine
     OUTPUT{i}=sdpvar(numel(Machines{i,3}),ntimes,'full');           %Output variables for each machine
     coeffs{i}=cell(ntimes,1);
-    %[coeffs{i}{:}]=deal(sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3})));    %coefficients of operating points, variables since they will depend on T
+    slopev{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full');
+    interceptv{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full'); 
     for j=1:ntimes
-        coeffs{i}{j} = sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3}));
+        coeffs{i}{j} = sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3}),'full'); %coefficients of operating points, variables since they will depend on T
     end
-    %J(i)=size(Machines{i,4},1);                                 %Number of sampled points
-
-    %Convexity check
-    slope=0;
-    intercept=0;
-% 
-%     for h=1:numel(Machines{i,4}{1})         %for each temperature
-%         for f=1:(J(i)-1)                    %for each segment
-%             for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
-%                 slope(f,k,h)=(Machines{i,4}{2}{h}(f+1,1)-Machines{i,4}{2}{h}(f,1))/(Machines{i,4}{2}{h}(f+1,1+k)-Machines{i,4}{2}{h}(f,1+k));
-%                 intercept(f,k,h)=Machines{i,4}{2}{h}(f+1,1)-slope(f,k)*Machines{i,4}{2}{h}(f+1,1+k);
-%             end
-%         end
-%     end
-%     
-
-
-
 
     
     if convexflag(i)&&convcheck==true     %characteristic function IS CONVEX in all outputs
         %convexflag{i}=true;
         %only if the convexcheck has been passed (I need to make references
         %to variable coefficients, so I can't make the check here)
-        for h=1:ntimes                          %for each time instant
-            for f=1:(J(i)-1)                    %for each segment
-                for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
-                    slope(f,k,h)=(coeffs{i}{h}(f+1,1)-coeffs{i}{h}(f,1))/(coeffs{i}{h}(f+1,1+k)-coeffs{i}{h}(f,1+k));
-                    intercept(f,k,h)=coeffs{i}{h}(f+1,1)-slope(f,k)*coeffs{i}{h}(f+1,1+k);
-                end
-            end
-        end
         for k=1:numel(Machines{i,3})
             for f=1:(J(i)-1)
-                Constr=[Constr INPUT{i}(:)'>=OUTPUT{i}(k,:).*slope(f,k,:)+intercept(f,k,:).*Z(i,:)];
-                Constr=[Constr OUTPUT{i}>=0:'Output Positivity'];
+                Constr=[Constr INPUT{i}(:)'>=OUTPUT{i}(k,:).*permute(slopev{i}(f,k,:),[1,3,2])+permute(interceptv{i}(f,k,:),[1,3,2]).*Z(i,:)];
+                Constr=[Constr (OUTPUT{i}>=0):'Output Positivity'];
             end
         end
         
@@ -406,10 +381,10 @@ else
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*timestep)))+sum(slackcost*slacks);
 end
 
-prova=[coeffs{:}];
-Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coeffs{1}{:}};
+coefcontainer=[coeffs{:}];
+Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:}};
 % Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
-Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,(roladvance+1):(roladvance+histdepth)) fuelusage Zext indicator alfas{:} betas{:}};
+Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,(roladvance+1):(roladvance+histdepth)) fuelusage Zext indicator};
 
 %ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
 ops = sdpsettings('solver','gurobi','verbose',3);
