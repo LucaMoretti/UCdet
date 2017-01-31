@@ -75,7 +75,10 @@ for i=1:Nmachines
     INPUT{i}=sdpvar(numel(Machines{i,2}),ntimes,'full');           %Input variables for each machine
     OUTPUT{i}=sdpvar(numel(Machines{i,3}),ntimes,'full');           %Output variables for each machine
     coeffs{i}=cell(ntimes,1);
-    [coeffs{i}{:}]=deal(sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3})));    %coefficients of operating points, variables since they will depend on T
+    %[coeffs{i}{:}]=deal(sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3})));    %coefficients of operating points, variables since they will depend on T
+    for j=1:ntimes
+        coeffs{i}{j} = sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3}));
+    end
     %J(i)=size(Machines{i,4},1);                                 %Number of sampled points
 
     %Convexity check
@@ -111,15 +114,15 @@ for i=1:Nmachines
         for k=1:numel(Machines{i,3})
             for f=1:(J(i)-1)
                 Constr=[Constr INPUT{i}(:)'>=OUTPUT{i}(k,:).*slope(f,k,:)+intercept(f,k,:).*Z(i,:)];
-                Constr=[Constr OUTPUT{i}>=0];
+                Constr=[Constr OUTPUT{i}>=0:'Output Positivity'];
             end
         end
         
     else   %characteristic function IS NOT CONVEX in all outputs 
             
         alfas{i}=sdpvar(J(i),ntimes,'full');           %alfa variables for each machine and each timestep
-        Constr=[Constr 0<=alfas{i}<=1];                             %alfa values always in between 0 and 1
-        Constr=[Constr sum(alfas{i},1)==Z(i,:)];          %sum of alfas in one timestep equal to one if machine on
+        Constr=[Constr (0<=alfas{i}<=1):'Alfas limitation'];                             %alfa values always in between 0 and 1
+        Constr=[Constr (sum(alfas{i},1)==Z(i,:)):'Alfas only if machine on'];          %sum of alfas in one timestep equal to one if machine on
         betas{i}=binvar(J(i)-1,ntimes);          %beta variables for each machine and each timestep
         Constr=[Constr sum(betas{i},1)== 1];                       %only one segment active in each timestep
         for j=2:(J(i)-1)
@@ -132,7 +135,7 @@ for i=1:Nmachines
         for h=1:ntimes
             colP=1;     %starting column for reading sampled points matrix
             for j=1:numel(Machines{i,2})
-                Constr=[Constr INPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)];
+                Constr=[Constr (INPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)):strcat('Input constraint on ',num2str(h),' timestep')];
                 colP=colP+1;
             end
             for j=1:numel(Machines{i,3})
@@ -408,7 +411,8 @@ Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart
 % Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
 Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,(roladvance+1):(roladvance+histdepth)) fuelusage Zext indicator alfas{:} betas{:}};
 
-ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
+%ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
+ops = sdpsettings('solver','gurobi','verbose',3);
 Model=optimizer(Constr,Objective,ops,Param,Outs);
 
 %sol=optimize(Constr,Objective,ops)
