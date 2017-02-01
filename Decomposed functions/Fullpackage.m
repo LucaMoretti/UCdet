@@ -1,21 +1,21 @@
 %% MAIN ROUTINE
-tic
+
 clear
 clc
-
+tic
 %SELECTION OF SIMULATION TYPE
 % 1 --> single batch
 % 2 --> contiguous batches
 % 3 --> rolling horizon
 
-symtype = 1;
+symtype = 3;
 
 %DATA FOR SYMTYPE #2
-nbatches = 2;
+nbatches = 5;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 24;
-roladvance = 1;
+roladvance = 5;
 
 %%Convexity check on/off 
 convcheck=true;
@@ -295,7 +295,7 @@ elseif symtype==3
     
 end
 
-sum(Obj)
+totalfo=sum(Obj)
 
 waitbar(0.9,han,'Solution plotting')
 Plotting

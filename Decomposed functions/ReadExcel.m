@@ -86,8 +86,13 @@ end
 exclusivetags=unique(flagsvector(flagsvector~=0));
 exclusivegroups=length(exclusivetags);
 
+
 a=cellfun(@(x) x(:,2:3),Machines(:,7),'UniformOutput',false);
 histdepth=ceil(max([a{:}])/timestep)-1;                                          %already in number of timesteps
+
+
+
+
 
 %Rearranging operating points
 for i=1:Nmachines

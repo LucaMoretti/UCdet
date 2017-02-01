@@ -181,10 +181,11 @@ Constr=[Constr Zext==[OnOffHist Z]];
 %On/Off indicator
 Constr=[Constr indicator(:,:) == Zext(:,2:end)-Zext(:,1:(end-1))];
 
+<<<<<<< HEAD
 
 %Uptime
 for unit = 1:Nmachines
-    minupsteps=ceil(Machines{unit,7}(2)/timestep)-1;
+    minupsteps=ceil(Machines{unit,7}(2)/timestep);
     for k = (histdepth-minupsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
         range = k:min(histdepth+ntimes,k+minupsteps-1);
@@ -195,8 +196,8 @@ end
 
 %Downtime
 for unit = 1:Nmachines
-    mindownsteps=ceil(Machines{unit,7}(3)/timestep)-1;
-    for k = (histdepth-minupsteps+2):(histdepth+ntimes)
+    mindownsteps=ceil(Machines{unit,7}(3)/timestep);
+    for k = (histdepth-mindownsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
         range = k:min(histdepth+ntimes,k+mindownsteps-1);
         % Constraints will be redundant unless indicator = 1
