@@ -1,5 +1,9 @@
 %% DATA READING FROM EXCEL FILE
 
+%%IMPORTANTE!! Bisogna fare un unico accesso all'excel, e smistare poi in
+%%Matlab i profili alle varie variabili. In questo modo velocizziamo di
+%%brutto questa fase della simulazione
+
 %addpath(genpath('D:\Dottorato\Ottimizzazione\Filone moretti!'))
 
 excelpath=fileparts(pwd());
@@ -22,7 +26,6 @@ end
 [~,range]=xlsread(Filepath,'Prices','pricerange');
 [Prices,Pricetags]=xlsread(Filepath,'Prices',range{1});
 
-
 for i=1:Nundisp
     UndProdall{i,1}=Undispnames(1,x(i));
     UndProdall{i,2}=Undispnames(2,x(i):(x(i+1)-1));
@@ -34,9 +37,14 @@ timestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
 ntimestot=size(Dall,1);                               % total number of timesteps
 days=ntimestot*timestep/24;                        % simulation days
 
+%Temperature Profiles
+[Tprof,~]=xlsread(Filepath,'Demand',strcat('D4:D',num2str(ntimestot+3)));
+
+
 % Create object.
 ExcelApp = actxserver('Excel.Application');
 ExcelApp.Visible = 1;
+
 
 % Open file located in the current folder.
 ExcelApp.Workbooks.Open(fullfile(Filepath));
@@ -73,11 +81,45 @@ for i=1:Nmachines
     flagsvector(i)=Machines{i,7}(1);
 end
 
+
+
 exclusivetags=unique(flagsvector(flagsvector~=0));
 exclusivegroups=length(exclusivetags);
 
-a=cellfun(@(x) x(:,3:4),Machines(:,7),'UniformOutput',false);
-histdepth=ceil(max([a{:}])/timestep);                                          %already in number of timesteps
+
+a=cellfun(@(x) x(:,2:3),Machines(:,7),'UniformOutput',false);
+histdepth=ceil(max([a{:}])/timestep)-1;                                          %already in number of timesteps
+
+
+
+
+
+%Rearranging operating points
+for i=1:Nmachines
+    matrix=Machines{i,4};
+    ntemps=sum(~isnan(matrix(:,1))); %temperatures at which characteristic curves is available
+    J(i)=size(matrix,1)/ntemps;      %number of sampled points for each machine
+    Machines{i,4}=cell(1,2);
+    for h=1:ntemps
+        Machines{i,4}{1}(h)=matrix(1+(h-1)*J(i),1);
+        Machines{i,4}{2}{h}=matrix(1+(h-1)*J(i):h*J(i),2:end);
+    end    
+end
+
+for i=1:Nmachines
+    t=Machines{i,4}{1};
+    if size(t,2)>1
+        x=cat(3,Machines{i,4}{2}{:});
+        x = permute(x,[3 1 2]);
+        C=interp1(t,x,Tprof);
+        C = permute(C,[2 3 1]);
+        C=mat2cell(C,size(C,1),size(C,2),ones(size(C,3),1));
+        Machines{i,8}=squeeze(C);
+    else
+        [C(:)]=deal(Machines{i,4}{2});
+        Machines{i,8}=squeeze(C);
+    end
+end
 
 %Inputs lists all possible machine inputs. 
 Inputs=[Machines{:,2}];
@@ -85,7 +127,7 @@ Inputs=unique(Inputs, 'Stable');    %Gets rid of duplicates
 
 %All possible outputs (without duplicates)
                                                         %Now defined on the basis of demand profiles, but what if there is an
-                                                        %internal consumption?
+                                                        %internal consumption that you don't see in the demand profiles?
 Outputs=([Dall{:,1}])';
 % Outputs=unique([Machines{:,3}]);                                                          
 
@@ -93,7 +135,23 @@ Noutputs=size(Outputs,2);
 
 %All possible goods (without duplicates)
 % Goods=unique([Inputs Outputs],'stable');
-% Ngoods=size(Goods,2);
+slope=cell(Nmachines,1);
+intercept=cell(Nmachines,1);
+
+% Convexity check
+for i=1:Nmachines
+    for h=1:ntimestot                            %for each time instant
+        for f=1:(J(i)-1)                    %for each segment
+            for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
+                slope{i}(f,k,h)=(Machines{i,8}{h}(f+1,1)-Machines{i,8}{h}(f,1))/(Machines{i,8}{h}(f+1,1+k)-Machines{i,8}{h}(f,1+k));
+                intercept{i}(f,k,h)=Machines{i,8}{h}(f+1,1)-slope{i}(f,k,h)*Machines{i,8}{h}(f+1,1+k);
+            end
+        end
+    end
+    convexflag(i)=all(all(all((slope{i}(2:end,:,:)>=slope{i}(1:(end-1),:,:)))));
+end
+
+
 
 %STORAGE DATA: 
 %column1 --> stored good; 

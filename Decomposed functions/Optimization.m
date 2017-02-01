@@ -74,34 +74,30 @@ Constr = slacks >= 0;
 for i=1:Nmachines
     INPUT{i}=sdpvar(numel(Machines{i,2}),ntimes,'full');           %Input variables for each machine
     OUTPUT{i}=sdpvar(numel(Machines{i,3}),ntimes,'full');           %Output variables for each machine
-    J(i)=size(Machines{i,4},1);                                 %Number of sampled points
-
-    %Convexity check
-    slope=0;
-    intercept=0;
-    for f=1:(J(i)-1)                    %for each segment
-        for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
-            slope(f,k)=(Machines{i,4}(f+1,1)-Machines{i,4}(f,1))/(Machines{i,4}(f+1,1+k)-Machines{i,4}(f,1+k));
-            intercept(f,k)=Machines{i,4}(f+1,1)-slope(f,k)*Machines{i,4}(f+1,1+k);
-        end
+    coeffs{i}=cell(ntimes,1);
+    slopev{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full');
+    interceptv{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full'); 
+    for j=1:ntimes
+        coeffs{i}{j} = sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3}),'full'); %coefficients of operating points, variables since they will depend on T
     end
-    
 
     
-    if all(all(slope(2:end,:)>=slope(1:(end-1),:)))&&convcheck==true     %characteristic function IS CONVEX in all outputs
-        convexflag{i}=true;
+    if convexflag(i)&&convcheck==true     %characteristic function IS CONVEX in all outputs
+        %convexflag{i}=true;
+        %only if the convexcheck has been passed (I need to make references
+        %to variable coefficients, so I can't make the check here)
         for k=1:numel(Machines{i,3})
             for f=1:(J(i)-1)
-                Constr=[Constr INPUT{i}(:)'>=OUTPUT{i}(k,:).*slope(f,k)+intercept(f,k).*Z(i,:)];
-                Constr=[Constr OUTPUT{i}>=0];
+                Constr=[Constr INPUT{i}(:)'>=OUTPUT{i}(k,:).*permute(slopev{i}(f,k,:),[1,3,2])+permute(interceptv{i}(f,k,:),[1,3,2]).*Z(i,:)];
+                Constr=[Constr (OUTPUT{i}>=0):'Output Positivity'];
             end
         end
         
     else   %characteristic function IS NOT CONVEX in all outputs 
             
         alfas{i}=sdpvar(J(i),ntimes,'full');           %alfa variables for each machine and each timestep
-        Constr=[Constr 0<=alfas{i}<=1];                             %alfa values always in between 0 and 1
-        Constr=[Constr sum(alfas{i},1)==Z(i,:)];          %sum of alfas in one timestep equal to one if machine on
+        Constr=[Constr (0<=alfas{i}<=1):'Alfas limitation'];                             %alfa values always in between 0 and 1
+        Constr=[Constr (sum(alfas{i},1)==Z(i,:)):'Alfas only if machine on'];          %sum of alfas in one timestep equal to one if machine on
         betas{i}=binvar(J(i)-1,ntimes);          %beta variables for each machine and each timestep
         Constr=[Constr sum(betas{i},1)== 1];                       %only one segment active in each timestep
         for j=2:(J(i)-1)
@@ -111,14 +107,16 @@ for i=1:Nmachines
         Constr=[Constr alfas{i}(J(i),:)<=betas{i}((J(i)-1),:)];             %last alfa constraint
 
         %Relation between alfas, betas and input/output(s)
-        colP=1;       %starting column for reading sampled points matrix
-        for j=1:numel(Machines{i,2})
-            Constr=[Constr INPUT{i}(j,:)==Machines{i,4}(:,colP)'*alfas{i}(:,:)];
-            colP=colP+1;
-        end
-        for j=1:numel(Machines{i,3})
-            Constr=[Constr OUTPUT{i}(j,:)==Machines{i,4}(:,colP)'*alfas{i}(:,:)];
-            colP=colP+1;
+        for h=1:ntimes
+            colP=1;     %starting column for reading sampled points matrix
+            for j=1:numel(Machines{i,2})
+                Constr=[Constr (INPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)):strcat('Input constraint on ',num2str(h),' timestep')];
+                colP=colP+1;
+            end
+            for j=1:numel(Machines{i,3})
+                Constr=[Constr OUTPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)];
+                colP=colP+1;
+            end
         end
     end
 
@@ -183,21 +181,22 @@ Constr=[Constr Zext==[OnOffHist Z]];
 %On/Off indicator
 Constr=[Constr indicator(:,:) == Zext(:,2:end)-Zext(:,1:(end-1))];
 
-% 
-% %Uptime
-% for unit = 1:Nmachines
-%     minupsteps=ceil(Machines{unit,7}(3)/timestep);
-%     for k = (histdepth-minupsteps+2):(histdepth+ntimes)
-%         % indicator will be 1 only when switched on
-%         range = k:min(histdepth+ntimes,k+minupsteps-1);
-%         % Constraints will be redundant unless indicator = 1
-%         Constr = [Constr, Zext(unit,range) >= indicator(unit,k-1)];
-%     end
-% end
+<<<<<<< HEAD
+
+%Uptime
+for unit = 1:Nmachines
+    minupsteps=ceil(Machines{unit,7}(2)/timestep);
+    for k = (histdepth-minupsteps+2):(histdepth+ntimes)
+        % indicator will be 1 only when switched on
+        range = k:min(histdepth+ntimes,k+minupsteps-1);
+        % Constraints will be redundant unless indicator = 1
+        Constr = [Constr, Zext(unit,range) >= indicator(unit,k-1)];
+    end
+end
 
 %Downtime
 for unit = 1:Nmachines
-    mindownsteps=ceil(Machines{unit,7}(4)/timestep);
+    mindownsteps=ceil(Machines{unit,7}(3)/timestep);
     for k = (histdepth-mindownsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
         range = k:min(histdepth+ntimes,k+mindownsteps-1);
@@ -382,11 +381,14 @@ if Nnetworks~=0
 else
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*timestep)))+sum(slackcost*slacks);
 end
-    
-Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
+
+coefcontainer=[coeffs{:}];
+Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:}};
+% Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
 Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,(roladvance+1):(roladvance+histdepth)) fuelusage Zext indicator};
 
-ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',2);
+%ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
+ops = sdpsettings('solver','gurobi','verbose',3);
 Model=optimizer(Constr,Objective,ops,Param,Outs);
 
 %sol=optimize(Constr,Objective,ops)
