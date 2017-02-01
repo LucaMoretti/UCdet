@@ -88,7 +88,7 @@ exclusivegroups=length(exclusivetags);
 
 
 a=cellfun(@(x) x(:,2:3),Machines(:,7),'UniformOutput',false);
-histdepth=ceil(max([a{:}])/timestep)-1;                                          %already in number of timesteps
+histdepth=ceil(max([a{:}])/timestep);                                          %already in number of timesteps
 
 
 
@@ -105,6 +105,8 @@ for i=1:Nmachines
         Machines{i,4}{2}{h}=matrix(1+(h-1)*J(i):h*J(i),2:end);
     end    
 end
+
+C = cell(1,1,ntimestot);
 
 for i=1:Nmachines
     t=Machines{i,4}{1};

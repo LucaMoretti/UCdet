@@ -1,28 +1,36 @@
 %% MAIN ROUTINE
-
-clear
 clc
+read=true;
+
 tic
+
+if read
+    clear
+    han = waitbar(0.05,'Simulation initialization');
+    ReadExcel
+else
+    han = waitbar(0.05,'Data already read');
+end
+
+suppresswarning=1;
+
 %SELECTION OF SIMULATION TYPE
 % 1 --> single batch
 % 2 --> contiguous batches
 % 3 --> rolling horizon
 
-symtype = 3;
+symtype = 2;
 
 %DATA FOR SYMTYPE #2
-nbatches = 5;
+nbatches = 4;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 24;
 roladvance = 5;
 
 %%Convexity check on/off 
-convcheck=true;
+convcheck=false;
 
-han = waitbar(0.05,'Simulation initialization');
-ReadExcel
-suppresswarning=1;
 
 %Variables initialization (required to understand variables structure)
 D=Dall;

@@ -60,5 +60,5 @@ elseif  symtype==3
     fuelusage=sol{en}(:,1:roladvance);
 end
 
-LastProd=cellfun(@(x) x(1,1),OUTPUT(:),'UniformOutput',false);
+LastProd=cellfun(@(x) x(1,end),OUTPUT(:),'UniformOutput',false);
 LastProd=[LastProd{:}];

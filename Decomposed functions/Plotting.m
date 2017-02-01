@@ -186,18 +186,11 @@ end
 
 figure()
 hold on
-<<<<<<< HEAD
+
 h=bar(cell2mat(costvals),1,'stacked');              
 color=parula(max(size(costvals,2),8));
 %color=copper(size(prodnames,1)+10);
 for j=1:size(cell2mat(costvals),2)
-
-
-
-
-
-
-
     set(h(j),'facecolor',color(j,:));
 end
 if can~=0

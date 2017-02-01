@@ -181,8 +181,6 @@ Constr=[Constr Zext==[OnOffHist Z]];
 %On/Off indicator
 Constr=[Constr indicator(:,:) == Zext(:,2:end)-Zext(:,1:(end-1))];
 
-<<<<<<< HEAD
-
 %Uptime
 for unit = 1:Nmachines
     minupsteps=ceil(Machines{unit,7}(2)/timestep);
@@ -193,17 +191,17 @@ for unit = 1:Nmachines
         Constr = [Constr, Zext(unit,range) >= indicator(unit,k-1)];
     end
 end
-
-%Downtime
-for unit = 1:Nmachines
-    mindownsteps=ceil(Machines{unit,7}(3)/timestep);
-    for k = (histdepth-mindownsteps+2):(histdepth+ntimes)
-        % indicator will be 1 only when switched on
-        range = k:min(histdepth+ntimes,k+mindownsteps-1);
-        % Constraints will be redundant unless indicator = 1
-        Constr = [Constr, Zext(unit,range) <= indicator(unit,k-1) + 1];
-    end
-end
+% 
+% %Downtime
+% for unit = 1:Nmachines
+%     mindownsteps=ceil(Machines{unit,7}(3)/timestep);
+%     for k = (histdepth-mindownsteps+2):(histdepth+ntimes)
+%         % indicator will be 1 only when switched on
+%         range = k:min(histdepth+ntimes,k+mindownsteps-1);
+%         % Constraints will be redundant unless indicator = 1
+%         Constr = [Constr, Zext(unit,range) <= indicator(unit,k-1) + 1];
+%     end
+% end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -385,10 +383,17 @@ end
 coefcontainer=[coeffs{:}];
 Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:}};
 % Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
-Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,(roladvance+1):(roladvance+histdepth)) fuelusage Zext indicator};
+if symtype==2||symtype==1
+    advance=ntimes+1;
+elseif symtype==3
+    advance=roladvance+1;
+end
 
-%ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
-ops = sdpsettings('solver','gurobi','verbose',3);
+
+Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage Zext indicator};
+
+ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
+
 Model=optimizer(Constr,Objective,ops,Param,Outs);
 
 %sol=optimize(Constr,Objective,ops)
