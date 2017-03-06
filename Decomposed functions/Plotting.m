@@ -70,6 +70,7 @@ for i=1:size(gainvals,2)
        gainvals(l)=[];
        h=h-1;
        l=l-1;
+       can=can-1;
     end 
 end     
 end
@@ -193,7 +194,7 @@ color=parula(max(size(costvals,2),8));
 for j=1:size(cell2mat(costvals),2)
     set(h(j),'facecolor',color(j,:));
 end
-if can~=0
+if size(gainvals,2)~=0
     k=bar(-[gainvals{:}],1,'stacked');
     color=hot(max(size(gainvals,2),8));
     for j=1:size(gainvals,2)

@@ -33,9 +33,9 @@ for i=1:Nundisp
 end
     
 %Simulation horizon and timestep settings
-timestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
+basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
 ntimestot=size(Dall,1);                               % total number of timesteps
-days=ntimestot*timestep/24;                        % simulation days
+days=ntimestot*basetimestep/24;                        % simulation days
 
 %Temperature Profiles
 [Tprof,~]=xlsread(Filepath,'Demand',strcat('D4:D',num2str(ntimestot+3)));
@@ -88,9 +88,7 @@ exclusivegroups=length(exclusivetags);
 
 
 a=cellfun(@(x) x(:,2:3),Machines(:,7),'UniformOutput',false);
-histdepth=ceil(max([a{:}])/timestep);                                          %already in number of timesteps
-
-
+histdepth=ceil(max([a{:}])/basetimestep);                                          %already in number of timesteps
 
 
 
@@ -108,6 +106,7 @@ end
 
 C = cell(1,1,ntimestot);
 
+%Operating Coefficients for each machine
 for i=1:Nmachines
     t=Machines{i,4}{1};
     if size(t,2)>1
@@ -263,4 +262,4 @@ else                                    %only fuel prices
 end   
 Nfuels=size(Fuelsall,1);
 
-system('taskkill /F /IM EXCEL.EXE');
+system('taskkill /F /IM EXCEL.EXE');            %alterantives to brutally murder all excel tasks?

@@ -159,7 +159,7 @@ for i=1:Nnetworks
 end
 
 
-Obj=((sum([Fuels{:,2}]'.*(fuelusage.*timestep),1))+(sum([Networks{:,4}]'.*(NETWORKbought.*timestep),1))-(sum([Networks{:,5}]'.*(NETWORKsold.*timestep),1)));
+Obj=((sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1])),1))+(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1])),1))-(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1])),1)));
 
 elseif symtype == 2 || symtype == 3
     
@@ -321,7 +321,7 @@ else
 end
 
 %Obj=[Obj ((sum([Fuels{:,2}]'.*(fuelusage.*timestep),1))+(sum([Networks{:,4}]'.*(NETWORKbought.*timestep),1))-(sum([Networks{:,5}]'.*(NETWORKsold.*timestep),1)))];
-Obj=(sum(fuelprice.*(fuelusage.*timestep),1))+(sum(netprice.*(NETWORKbought.*timestep),1))-(sum(netval.*(NETWORKsold.*timestep),1));
+Obj=(sum(fuelprice.*(fuelusage.*repmat(timestep(1:numsaves)',[Nfuels 1])),1))+(sum(netprice.*(NETWORKbought.*repmat(timestep(1:numsaves)',[Nnetworks 1])),1))-(sum(netval.*(NETWORKsold.*repmat(timestep(1:numsaves)',[Nnetworks 1])),1));
 
 else
    
@@ -433,7 +433,7 @@ else
 end
 
 %Obj=[Obj ((sum([Fuels{:,2}]'.*(fuelusage.*timestep),1))+(sum([Networks{:,4}]'.*(NETWORKbought.*timestep),1))-(sum([Networks{:,5}]'.*(NETWORKsold.*timestep),1)))];
-Obj=[Obj ((sum(fuelprice.*(fuelusage.*timestep),1))+(sum(netprice.*(NETWORKbought.*timestep),1))-(sum(netval.*(NETWORKsold.*timestep),1)))];
+Obj=[Obj ((sum(fuelprice.*(fuelusage.*repmat(timestep(1:numsaves)',[Nfuels 1])),1))+(sum(netprice.*(NETWORKbought.*repmat(timestep(1:numsaves)',[Nnetworks 1])),1))-(sum(netval.*(NETWORKsold.*repmat(timestep(1:numsaves)',[Nnetworks 1])),1)))];
 
 end
 end

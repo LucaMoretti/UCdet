@@ -1,13 +1,16 @@
+
 %% CREATION OF OPTIMIZATION MODEL
 
 if suppresswarning==1
     warning('off','all')
 end
 
+%Variable time resolution
+%timestep=sdpvar(ntimes-1,1,'full');
 
 %Binary variables for machines
 Z=binvar(Nmachines,ntimes,'full');
-indicator=intvar(Nmachines,ntimes+histdepth-1);
+indicator=sdpvar(Nmachines,ntimes+histdepth-1);
 %On/Off hystory
 OnOffHist=binvar(Nmachines,histdepth,'full');
 
@@ -43,13 +46,16 @@ end
 if Nstorages~=0
     STORstart=sdpvar(Nstorages,1,'full');
     STORAGEpower=sdpvar(Nstorages,ntimes,'full'); %create two variables for each storage and each timestep: storage content and charge/discharge for that timestep
+    STORAGEpin=sdpvar(Nstorages,ntimes,'full');
+    STORAGEpout=sdpvar(Nstorages,ntimes,'full');
+    zSTOR=binvar(Nstorages,ntimes,'full');
     STORAGEcharge=sdpvar(Nstorages,ntimes,'full');
 else
     STORstart=sdpvar(1,1);
     STORAGEpower=sdpvar(1,1);
     STORAGEcharge=sdpvar(1,1);
 end
-finstore=sdpvar(Nstorages,1,'full');         %final storage state
+
 %Networks variables
 if Nnetworks~=0
     NETWORKbought=sdpvar(Nnetworks,ntimes,'full');
@@ -138,7 +144,7 @@ for i=1:Nmachines
         Mbig=Mbigspare;
     end
     %Vincolo in salita con accensione macchina a carico arbitrario
-    Constr=[Constr OUTPUT{i}(1,2:end) - OUTPUT{i}(1,1:(end-1)) <= Machines{i,6}(2)*timestep + (1-Z(i,1:(end-1)))*Mbig]; %again, ramp limit on main machine output
+    Constr=[Constr OUTPUT{i}(1,2:end) - OUTPUT{i}(1,1:(end-1)) <= Machines{i,6}(2)*timestep(1:end-1)' + (1-Z(i,1:(end-1)))*Mbig]; %again, ramp limit on main machine output
     Constr=[Constr OUTPUT{i}(1,1) - LastProd(i) <= Machines{i,6}(2)*timestep + (1-OnOffHist(i,end))*Mbig]; %Initial ramping constraint 
     %Vincolo in salita con accensione macchina a minimo carico --> il
     %minimo carico può essere sostituito con un nuovo parametro ad hoc che
@@ -146,7 +152,7 @@ for i=1:Nmachines
 %     Constr=[Constr OUTPUT{i}(1,2:end) - OUTPUT{i}(1,1:(end-1)) <= Machines{i,6}(2)*timestep.*Z(i,1:(end-1)) + (Z(i,2:end)-Z(i,1:(end-1)))*Machines{i,5}(1)];
     
     %Vincolo in discesa 
-    Constr=[Constr OUTPUT{i}(1,1:(end-1)) - OUTPUT{i}(1,2:end) <= Machines{i,6}(1)*timestep + (1-Z(i,2:end))*Mbig]; %again, ramp limit on main machine output
+    Constr=[Constr OUTPUT{i}(1,1:(end-1)) - OUTPUT{i}(1,2:end) <= Machines{i,6}(1)*timestep(1:end-1)' + (1-Z(i,2:end))*Mbig]; %again, ramp limit on main machine output
     Constr=[Constr LastProd(i) - OUTPUT{i}(1,1) <= Machines{i,6}(1)*timestep + (1-Z(i,1))*Mbig]; %Initial ramping constraint
     %Vincolo in discesa con spegnimento macchina a minimo carico (da
     %completare)
@@ -180,42 +186,58 @@ Zext=binvar(Nmachines,ntimes+histdepth);
 Constr=[Constr Zext==[OnOffHist Z]];
 %On/Off indicator
 Constr=[Constr indicator(:,:) == Zext(:,2:end)-Zext(:,1:(end-1))];
+extendedtimestep=[ones(histdepth,1)'*basetimestep timestep'];
 
 %Uptime
 for unit = 1:Nmachines
-    minupsteps=ceil(Machines{unit,7}(2)/timestep);
-    for k = (histdepth-minupsteps+2):(histdepth+ntimes)
+    baseminupsteps=ceil(Machines{unit,7}(2)/basetimestep);
+    for k = (histdepth-baseminupsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
-        range = k:min(histdepth+ntimes,k+minupsteps-1);
+        l=0;
+        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<=Machines{unit,7}(2))
+            l=l+1;
+        end
+        range = k:(k+l);
+        % range = k:min(histdepth+ntimes,k+minupsteps-1);
         % Constraints will be redundant unless indicator = 1
         Constr = [Constr, Zext(unit,range) >= indicator(unit,k-1)];
     end
 end
-% 
-% %Downtime
-% for unit = 1:Nmachines
-%     mindownsteps=ceil(Machines{unit,7}(3)/timestep);
-%     for k = (histdepth-mindownsteps+2):(histdepth+ntimes)
-%         % indicator will be 1 only when switched on
-%         range = k:min(histdepth+ntimes,k+mindownsteps-1);
-%         % Constraints will be redundant unless indicator = 1
-%         Constr = [Constr, Zext(unit,range) <= indicator(unit,k-1) + 1];
-%     end
-% end
+
+%Downtime
+for unit = 1:Nmachines
+    basemindownsteps=ceil(Machines{unit,7}(3)/basetimestep);
+    for k = (histdepth-basemindownsteps+2):(histdepth+ntimes)
+        % indicator will be 1 only when switched on
+        l=0;
+        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<=Machines{unit,7}(3))
+            l=l+1;
+        end
+        range = k:(k+l);
+        % range = k:min(histdepth+ntimes,k+mindownsteps-1);
+        % Constraints will be redundant unless indicator = 1
+        Constr = [Constr, Zext(unit,range) <= indicator(unit,k-1) + 1];
+    end
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%
 % STORAGE CONSTRAINTS %
 %%%%%%%%%%%%%%%%%%%%%%%
 
+Constr=[Constr STORAGEpin>=0];
+Constr=[Constr STORAGEpout>=0];
+   
+
 for i=1:Nstorages
-    Constr=[Constr -Storages{i,3}<=STORAGEpower(i,:)<=Storages{i,5}];    %limit in charge/discharge
+    Constr=[Constr STORAGEpower(i,:)==STORAGEpout(i,:)*Storages{i,6}-STORAGEpin(i,:)/Storages{i,4}];
+    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}.*zSTOR(i,:).*timestep'];    %limit in charge/discharge
+    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}.*(1-zSTOR(i,:)).*timestep'];    %limit in charge/discharge
     Constr=[Constr STORAGEcharge(i,1)==STORstart(i)];    %energy content initial condition
-    Constr=[Constr STORAGEcharge(i,2:end)==STORAGEcharge(i,1:(end-1)).*(1-Storages{i,7}.*timestep)-STORAGEpower(i,1:(end-1)).*timestep]; %energy content evolution in time
+    Constr=[Constr STORAGEcharge(i,2:end)==STORAGEcharge(i,1:(end-1)).*(1-Storages{i,7}.*timestep(1:end-1)')-(STORAGEpout(i,1:(end-1))-STORAGEpin(i,1:(end-1))).*timestep(1:end-1)']; %energy content evolution in time
     % Energy(k+1)=Energy(k)[kWh]-Power(k)[kW]*?t[h] <--- assicurati che
     % unità di misura siano coerenti!!!
-    Constr=[Constr finstore(i)==STORAGEcharge(i,end)-STORAGEpower(i,end)*timestep];    %final charge condition (initial condition of next segment
-    Constr=[Constr finstore(i)==STORAGEcharge(i,1)];    %cyclic storage charge condition
+    Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end)==STORstart(i)]; %cyclic storage charge condition  
     Constr=[Constr Storages{i,9}./100<=STORAGEcharge(i,:)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints
 end
 
@@ -237,8 +259,8 @@ if Nnetworks~=0
             maxsold=min(Mbigspare,Networks{i,3});         
             maxbought=min(Mbigspare,Networks{i,2});
         end  
-        Constr=[Constr NETWORKsold(i,:) <= zNET(i,:) .* maxsold];
-        Constr=[Constr NETWORKbought(i,:) <= (1-zNET(i,:)) .* maxbought];
+        Constr=[Constr NETWORKsold(i,:) <= zNET(i,:) .* maxsold.*timestep'];
+        Constr=[Constr NETWORKbought(i,:) <= (1-zNET(i,:)) .* maxbought.*timestep'];
     end
 end
 
@@ -322,7 +344,7 @@ for j=1:Noutputs
         Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + NETWORKbought(netind,:) - NETWORKsold(netind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
     elseif store(j)==1&&net(j)==0
         [~,~,storeind]=intersect(Outputs(j),Storages(:,1));
-        Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
+        Constr=[Constr [netprod(j,:) + + STORAGEpower(storeind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
     elseif store(j)==0&&net(j)==1
         [~,~,netind]=intersect(Outputs(j),Networks(:,1));
         Constr=[Constr [netprod(j,:) + NETWORKbought(netind,:) - NETWORKsold(netind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
@@ -375,9 +397,9 @@ waitbar(0.6,han,'Problem Solution')
 %%%%%%%%%%%%%%%%%%%%%%
 %[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
 if Nnetworks~=0
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*timestep)))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*timestep)))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*timestep)))+sum(slackcost*slacks);
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])));
 else
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*timestep)))+sum(slackcost*slacks);
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks);
 end
 
 coefcontainer=[coeffs{:}];

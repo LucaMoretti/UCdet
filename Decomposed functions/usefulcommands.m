@@ -18,3 +18,34 @@ Machines(i,8)=squeeze(C);
     end
     
     all(all(all((slope(2:end,:,:)>=slope(1:(end-1),:,:)))))
+    
+T=24;
+delt=1/2;
+N=1;
+n=10;
+while n(end)>1
+    N=N+1;
+    n=0;
+    Tsp=[];
+    for i=1:N
+        n(i)=T/N/delt/2^(i-1);
+        deli(i)=delt*2^(i-1);
+        Tsp=[Tsp ones(1,round(n(i)))*deli(i)];
+    end
+end
+
+N=0;
+Ttot=0;
+while Ttot<T
+    N=N+1;
+    for i=1:N
+        n(i)=2^(i-1);
+    end
+    Ttot=n(end)*delt*N;
+end
+    
+% n(i+1)=floor(T/N/delt/2^(i));
+% deli(i+1)=(T-sum(Tsp))/n(end);
+% Tsp=[Tsp ones(1,round(n(end)))*deli(end)];
+
+data=ones(48/delt);
