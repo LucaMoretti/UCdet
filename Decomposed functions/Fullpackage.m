@@ -21,10 +21,10 @@ varstep=true;
 % 2 --> contiguous batches
 % 3 --> rolling horizon
 
-symtype = 3;
+symtype = 2;
 
 %DATA FOR SYMTYPE #2
-nbatches = 4;
+nbatches = 52;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 24;
@@ -37,7 +37,13 @@ convcheck=false;
 %Variables initialization (required to understand variables structure)
 D=Dall;
 Fuels=Fuelsall;
-UndProd=UndProdall;
+if Nundisp~=0
+    UndProd=UndProdall;
+else
+    UndProd=cell(1,3);
+    UndProd{1,3}=0;
+end
+
 Networks=Networksall;
 STORstart=0;
 
@@ -106,7 +112,12 @@ elseif symtype==2
     %Creation of problem structure
     Optimization
     OnOffHist=zeros(Nmachines,histdepth);
-    LastProd=zeros(1,Nmachines);    
+    LastProd=zeros(1,Nmachines);   
+    if Nstorages~=0
+        STORstart=cell2mat(Storages(:,10));
+    else
+        STORstart=0;
+    end
     
     for runcount=1:(nbatches-1)
         
@@ -127,7 +138,7 @@ elseif symtype==2
         actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(:),'UniformOutput',false);
         actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
-        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd cell2mat(Storages(:,10)) actualcoeffs{:} actualslope{:} actualintercept{:}};
+        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
         %Problem solution and data gathering
         Solution
         DataGathering        
@@ -175,7 +186,7 @@ elseif symtype==2
     actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(:),'UniformOutput',false);
     actualcoeffs=[actualcoeffs{:}];
     %Creation of parameters input vector
-    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd cell2mat(Storages(:,10)) actualcoeffs{:} actualslope{:} actualintercept{:}};
+    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
     %Problem solution and data gathering
     Solution
     DataGathering        

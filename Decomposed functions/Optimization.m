@@ -54,6 +54,8 @@ else
     STORstart=sdpvar(1,1);
     STORAGEpower=sdpvar(1,1);
     STORAGEcharge=sdpvar(1,1);
+    STORAGEpin=sdpvar(1,1);
+    STORAGEpout=sdpvar(1,1);
 end
 
 %Networks variables
@@ -72,6 +74,7 @@ slacks=sdpvar(size(D{2},1),ntimes,'full');
 slackcost=ones(1,size(D{2},1))*1e7;
 Constr = slacks >= 0;
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%
 % MACHINES CONSTRAINTS %
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -86,6 +89,7 @@ for i=1:Nmachines
     for j=1:ntimes
         coeffs{i}{j} = sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3}),'full'); %coefficients of operating points, variables since they will depend on T
     end
+    
 
     
     if convexflag(i)&&convcheck==true     %characteristic function IS CONVEX in all outputs
@@ -113,17 +117,23 @@ for i=1:Nmachines
         Constr=[Constr alfas{i}(J(i),:)<=betas{i}((J(i)-1),:)];             %last alfa constraint
 
         %Relation between alfas, betas and input/output(s)
-        for h=1:ntimes
             colP=1;     %starting column for reading sampled points matrix
-            for j=1:numel(Machines{i,2})
-                Constr=[Constr (INPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)):strcat('Input constraint on ',num2str(h),' timestep')];
-                colP=colP+1;
-            end
-            for j=1:numel(Machines{i,3})
-                Constr=[Constr OUTPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)];
-                colP=colP+1;
-            end
+
+        for j=1:numel(Machines{i,2})
+            temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
+            temp=[temp{:}];
+            Constr=[Constr INPUT{i}(j,:) == sum(temp.*alfas{i},1)];
+            %Constr=[Constr (INPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h))];
+            colP=colP+1;
         end
+        for j=1:numel(Machines{i,3})
+            temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
+            temp=[temp{:}];                
+            Constr=[Constr OUTPUT{i}(j,:) == sum(temp.*alfas{i},1)];
+            %Constr=[Constr OUTPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)];
+            colP=colP+1;
+        end
+ 
     end
 
 end
@@ -220,6 +230,10 @@ for unit = 1:Nmachines
     end
 end
 
+% Startup flag
+delta=sdpvar(Nmachines, ntimes, 'full');
+Constr=[Constr 0<= delta<= 1];
+Constr=[Constr Zext(:,(histdepth+1):end)-Zext(:,histdepth:(end-1))<=delta];
 
 %%%%%%%%%%%%%%%%%%%%%%%
 % STORAGE CONSTRAINTS %
@@ -237,7 +251,9 @@ for i=1:Nstorages
     Constr=[Constr STORAGEcharge(i,2:end)==STORAGEcharge(i,1:(end-1)).*(1-Storages{i,7}.*timestep(1:end-1)')-(STORAGEpout(i,1:(end-1))-STORAGEpin(i,1:(end-1))).*timestep(1:end-1)']; %energy content evolution in time
     % Energy(k+1)=Energy(k)[kWh]-Power(k)[kW]*?t[h] <--- assicurati che
     % unità di misura siano coerenti!!!
-    Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end)==STORstart(i)]; %cyclic storage charge condition  
+    if symtype~=3
+        Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end)==STORstart(i)]; %cyclic storage charge condition  
+    end
     Constr=[Constr Storages{i,9}./100<=STORAGEcharge(i,:)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints
 end
 
@@ -304,7 +320,7 @@ for j=1:Noutputs
         %Consumption by dispatchable machine i of good j
         if ismember(Outputs(j),Machines{i,2})
             l=l+1;
-            Constr=[Constr machcons{j}(l,:)==INPUT{i}(ismember(Machines{i,2},Outputs(j)),:)];
+            Constr=[Constr machcons{j}(l,:)==INPUT{i}(ismember(Machines{i,2},Outputs(j)),:)+delta(i,:).*SUcosts(i)];
         end
 
     end
@@ -376,7 +392,7 @@ for j=1:Nfuels
         for h=1:numel(Machines{i,2})
             if isequal(Fuels{j,1},Machines{i,2}(h))
                 l=l+1;
-                Constr=[Constr fuelcons{j}(l,:)==INPUT{i}(h,:)];
+                Constr=[Constr fuelcons{j}(l,:)==INPUT{i}(h,:)+delta(i,:).*SUcosts(i)];
             end
         end
     end
@@ -412,7 +428,7 @@ elseif symtype==3
 end
 
 
-Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage Zext indicator};
+Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod};
 
 ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
 

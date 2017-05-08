@@ -133,6 +133,9 @@ for i=1:Nmachines
         cont=cont+1;
         tags{cont}=strcat(Machines{i,1},' fuel');
         costvals{cont}=(INPUT{i})'.*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
+        cont=cont+1;
+        tags{cont}=strcat(Machines{i,1},' start-up cost');
+        costvals{cont}=startflags(i,:)'.*SUcosts(i).*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
     end
 end
 for i=1:Nnetworks
@@ -284,6 +287,9 @@ for i=1:Nmachines
         tags{cont}=strcat(Machines{i,1},' fuel');
         pr=Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
         costvals{cont}=(INPUT{i})'.*pr(1:numsaves);
+        cont=cont+1;
+        tags{cont}=strcat(Machines{i,1},' start-up cost');
+        costvals{cont}=startflags(i,:)'.*SUcosts(i).*pr(1:numsaves);
     end
 end
 for i=1:Nnetworks
@@ -395,10 +401,13 @@ cont=0;
 can=0;
 
 for i=1:Nmachines
-    if ismember(Machines{i,2},[Fuels{:,1}]) %&&sum((INPUT{i}))>1e-6         %condizione da ritoccare
+    if ismember(Machines{i,2},[Fuels{:,1}])
         cont=cont+1;
         pr=Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
         costvals{cont}(pos,1)=(INPUT{i})'.*pr(1:numsaves);
+        cont=cont+1;
+        tags{cont}=strcat(Machines{i,1},' start-up cost');
+        costvals{cont}(pos,1)=startflags(i,:)'.*SUcosts(i).*pr(1:numsaves);        
     end
 end
 for i=1:Nnetworks

@@ -38,7 +38,7 @@ ntimestot=size(Dall,1);                               % total number of timestep
 days=ntimestot*basetimestep/24;                        % simulation days
 
 %Temperature Profiles
-[Tprof,~]=xlsread(Filepath,'Demand',strcat('D4:D',num2str(ntimestot+3)));
+[Tprof,~]=xlsread(Filepath,'Demand',strcat('D5:D',num2str(ntimestot+4)));
 
 
 % Create object.
@@ -106,7 +106,8 @@ end
 
 C = cell(1,1,ntimestot);
 
-%Operating Coefficients for each machine
+%Operating Coefficients for each machine            N.B. It could be possible to extrapolate as well, and to change the interpolation method
+                                                    %from linear
 for i=1:Nmachines
     t=Machines{i,4}{1};
     if size(t,2)>1
@@ -121,6 +122,9 @@ for i=1:Nmachines
         Machines{i,8}=squeeze(C);
     end
 end
+
+%StartUp cost vector
+SUcosts=cell2mat(cellfun(@(x) x(4),Machines(:,7),'UniformOutput',false));
 
 %Inputs lists all possible machine inputs. 
 Inputs=[Machines{:,2}];

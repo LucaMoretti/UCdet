@@ -25,6 +25,8 @@ if symtype==1||symtype==2
     OnOffHist=sol{en};
     en=en+1;
     fuelusage=sol{en};
+    en=en+1;
+    startflags=sol{en};
 elseif  symtype==3
     st=1;
     en=Nmachines;
@@ -58,6 +60,8 @@ elseif  symtype==3
     OnOffHist=sol{en};
     en=en+1;
     fuelusage=sol{en}(:,1:roladvance);
+    en=en+1;
+    startflags=sol{en}(:,1:roladvance);
 end
 
 LastProd=cellfun(@(x) x(1,end),OUTPUT(:),'UniformOutput',false);
