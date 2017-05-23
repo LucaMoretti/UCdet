@@ -166,8 +166,10 @@ elseif symtype==2
         Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),Networksall(:,4:5),'UniformOutput',false);
         %Creation of problem structure
         OnOffHisttemp=OnOffHist;
+        STORstarttemp=STORstart;
         LastProdtemp=LastProd;
         Optimization    
+        STORstart=Storstarttemp;
         OnOffHist=OnOffHisttemp;
         LastProd=LastProdtemp;
     end
