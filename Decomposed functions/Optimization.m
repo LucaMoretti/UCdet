@@ -155,7 +155,7 @@ for i=1:Nmachines
     end
     %Vincolo in salita con accensione macchina a carico arbitrario
     Constr=[Constr OUTPUT{i}(1,2:end) - OUTPUT{i}(1,1:(end-1)) <= Machines{i,6}(2)*timestep(1:end-1)' + (1-Z(i,1:(end-1)))*Mbig]; %again, ramp limit on main machine output
-    Constr=[Constr OUTPUT{i}(1,1) - LastProd(i) <= Machines{i,6}(2)*timestep + (1-OnOffHist(i,end))*Mbig]; %Initial ramping constraint 
+    Constr=[Constr OUTPUT{i}(1,1) - LastProd(i) <= Machines{i,6}(2)*basetimestep + (1-OnOffHist(i,end))*Mbig]; %Initial ramping constraint 
     %Vincolo in salita con accensione macchina a minimo carico --> il
     %minimo carico può essere sostituito con un nuovo parametro ad hoc che
     %consenta alla macchina in fase di avviamento di lavorare anche sotto al minimo carico normale 
@@ -308,6 +308,9 @@ for i=1:Noutputs
     if Nundisp~=0; undmachprod{i}=sdpvar(sum(ismember([UndProd{:,2}],Outputs(i))) ,ntimes,'full'); end
 end
 
+
+%THERE MIGHT BE SMARTER WAY OF DOING THIS, WITHOUT AUX VARIABLES --> WOULD
+%IT IMPROVE COMPUTATION TIME?
 for j=1:Noutputs
     f=0;
     l=0;

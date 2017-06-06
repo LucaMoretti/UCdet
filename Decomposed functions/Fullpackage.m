@@ -169,7 +169,7 @@ elseif symtype==2
         STORstarttemp=STORstart;
         LastProdtemp=LastProd;
         Optimization    
-        STORstart=Storstarttemp;
+        STORstart=STORstarttemp;
         OnOffHist=OnOffHisttemp;
         LastProd=LastProdtemp;
     end
