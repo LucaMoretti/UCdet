@@ -409,7 +409,6 @@ if suppresswarning==1
     warning('on','all')
 end
 
-waitbar(0.6,han,'Problem Solution')
 
 %%%%%%%%%%%%%%%%%%%%%%
 % OBJECTIVE FUNCTION %

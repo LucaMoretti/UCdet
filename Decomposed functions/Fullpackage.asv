@@ -24,7 +24,7 @@ varstep=true;
 symtype = 2;
 
 %DATA FOR SYMTYPE #2
-nbatches = 52;
+nbatches = 12;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 24;
@@ -84,7 +84,7 @@ if symtype==1 || (symtype==3&&roltsteps>=ntimestot)
     %Creation of parameters input vector
     Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
     %Problem solution and data gathering
-    waitbar(0.5,han,'Problem solution')
+    waitbar(0.5,han,'Problem solu')
     Solution
     DataGathering
   
@@ -281,12 +281,6 @@ elseif symtype==3
             if Nnetworks~=0
                 Networks(:,4:5)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i))),1),1:length(n),'UniformOutput',false),Networks(:,4:5),'UniformOutput',false),'UniformOutput',false);
             end
-            
-            
-            %IT NEEDS TO BE CHANGED!!!! STILL TAKES INTO ACCOUNT SINGLE
-            %AMBIENT VARIABLE. NEW COEFFICIENTS NEED TO BE CALCULATED EACH
-            %TIME, WITH THE SAME METHODOLOGY APPLIED IN READEXCEL (WRAP IT
-            %IN A FUNCTION MAYBE)
             
             T4run=Tprof(tstart:(tstart+roltsteps-1));
             T4run=arrayfun(@(i) mean(T4run(sum(n(1:(i-1)))+1:sum(n(1:i)))),1:length(n),'UniformOutput',false);

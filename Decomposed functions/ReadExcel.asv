@@ -130,14 +130,10 @@ for i=1:Nmachines
             end
         end
     end
-    if nambs~=0
-        for h=1:ntemps(end)
-            Machines{i,4}{1}(h,:)=matrix(1+(h-1)*J(i),1:nambs);
-            Machines{i,4}{2}{h,:}=matrix(1+(h-1)*J(i):h*J(i),nambs+1:end);
-        end    
-    else
-        Machines{i,4}{2}=matrix;
-    end
+    for h=1:ntemps(end)
+        Machines{i,4}{1}(h,:)=matrix(1+(h-1)*J(i),1:nambs);
+        Machines{i,4}{2}{h,:}=matrix(1+(h-1)*J(i):h*J(i),nambs+1:end);
+    end    
 end
 
  C = cell(1,1,ntimestot);
@@ -146,9 +142,9 @@ end
                                                     %from linear
 for i=1:Nmachines
     t=Machines{i,4}{1};
+    influencer=ismember(ambnames,Machines{i,9});
+    ambprof=ambvar(:,influencer);
     if size(t,1)>1
-        influencer=ismember(ambnames,Machines{i,9});
-        ambprof=ambvar(:,influencer);
         x=cat(3,Machines{i,4}{2}{:});
         if size(Machines{i,9},2)>1
             x=num2cell(x,3);
@@ -165,7 +161,7 @@ for i=1:Nmachines
             Machines{i,8}=squeeze(C);
         end
     else
-        [C(:)]=deal(Machines{i,4}(2));
+        [C(:)]=deal(Machines{i,4}{2});
         Machines{i,8}=squeeze(C);
     end
 end
