@@ -2,6 +2,10 @@
 clc
 read=true;
 
+%%Convexity check on/off 
+global convcheck            %toppa per evitare casini. In realtà converrebbe eliminare i NaN dai coefficienti calcolati, ma si rischia di perdere informazione sul fatto che c'è qualche problema con le slopes, nel caso in cui si sia effettivamente interessati.
+convcheck=false;
+
 tic
 
 if read
@@ -30,8 +34,7 @@ nbatches = 52;
 roltsteps = 24;
 roladvance = 5;
 
-%%Convexity check on/off 
-convcheck=false;
+
 
 
 %Variables initialization (required to understand variables structure)

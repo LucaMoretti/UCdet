@@ -1,5 +1,5 @@
 %% DATA READING FROM EXCEL FILE
-
+global convcheck
 %%IMPORTANTE!! Bisogna fare un unico accesso all'excel, e smistare poi in
 %%Matlab i profili alle varie variabili. In questo modo velocizziamo di
 %%brutto questa fase della simulazione
@@ -8,7 +8,7 @@
 
 excelpath=fileparts(pwd());
 
-Filename='Input.xlsm';
+Filename='Input riccardo.xlsm';
 Filepath=strcat(excelpath,'\',Filename);
 
 [~,range]=xlsread(Filepath,'Demand','datarange');
@@ -195,8 +195,13 @@ for i=1:Nmachines
     for h=1:ntimestot                            %for each time instant
         for f=1:(J(i)-1)                    %for each segment
             for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
-                slope{i}(f,k,h)=(Machines{i,8}{h}(f+1,1)-Machines{i,8}{h}(f,1))/(Machines{i,8}{h}(f+1,1+k)-Machines{i,8}{h}(f,1+k));
-                intercept{i}(f,k,h)=Machines{i,8}{h}(f+1,1)-slope{i}(f,k,h)*Machines{i,8}{h}(f+1,1+k);
+                if convcheck
+                    slope{i}(f,k,h)=(Machines{i,8}{h}(f+1,1)-Machines{i,8}{h}(f,1))/(Machines{i,8}{h}(f+1,1+k)-Machines{i,8}{h}(f,1+k));
+                    intercept{i}(f,k,h)=Machines{i,8}{h}(f+1,1)-slope{i}(f,k,h)*Machines{i,8}{h}(f+1,1+k);
+                else
+                    slope{i}(f,k,h)=0;
+                    intercept{i}(f,k,h)=0;
+                end
             end
         end
     end
