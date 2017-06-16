@@ -18,21 +18,21 @@ end
 
 suppresswarning=1;
 
-varstep=true;
+varstep=false;
 
 %SELECTION OF SIMULATION TYPE
 % 1 --> single batch
 % 2 --> contiguous batches
 % 3 --> rolling horizon
 
-symtype = 2;
+symtype = 3;
 
 %DATA FOR SYMTYPE #2
-nbatches = 52;
+nbatches = 70;
 
 %DATA FOR SYMTYPE #3
-roltsteps = 24;
-roladvance = 5;
+roltsteps = 48;
+roladvance = 24;
 
 
 
@@ -338,6 +338,7 @@ elseif symtype==3
         DataGathering        
         %starting time update update
         tstart=tstart+roladvance;   
+        waitbar(0.4 + 0.5 * runcount/nsims,han,strcat('Current starting step is ',num2str(tstart)))
     end
     
     %while tstart<=ntimestot                    %if data changes it might be better to shrink the horizon until you reach the end of the time horizon
@@ -381,9 +382,9 @@ elseif symtype==3
         %Creation of problem structure
         OnOffHisttemp=OnOffHist;
         LastProdtemp=LastProd;
-        temp=STORstart;
+        tempst=STORstart;
         Optimization    
-        STORstart=temp;
+        STORstart=tempst;
         OnOffHist=OnOffHisttemp;
         LastProd=LastProdtemp;
         %Implementation of parameters values for current simulation instance

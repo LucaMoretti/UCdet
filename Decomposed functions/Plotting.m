@@ -97,7 +97,7 @@ stdval={Pmat{i,5}' -Pmat{i,7}' -Pmat{i,8}' -Pmat{i,13}'};
 h = bar([stdval{L{i}(3:5)} -Pmat{i,13}'],0.6,'stacked');
 plot(Dall{2}(i,:),'k','LineWidth',2)
 names=[prodnames ;stdnam(L{i}(1:5)); Pmat{i,12}];
-color=parula(max(size(prodnames,1),8));
+color=parula(max(size(prodnames,1),5));
 %color=copper(size(prodnames,1)+10);
 for j=1:size(prodnames,1)
     set(k(j),'facecolor',color(j,:));

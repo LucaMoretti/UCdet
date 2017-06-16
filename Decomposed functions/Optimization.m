@@ -8,6 +8,8 @@ end
 %Variable time resolution
 %timestep=sdpvar(ntimes-1,1,'full');
 
+Disspenalty=100;
+
 %Binary variables for machines
 Z=binvar(Nmachines,ntimes,'full');
 indicator=sdpvar(Nmachines,ntimes+histdepth-1);
@@ -204,7 +206,7 @@ for unit = 1:Nmachines
     for k = (histdepth-baseminupsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
         l=0;
-        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<=Machines{unit,7}(2))
+        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l+1)))<=Machines{unit,7}(2))
             l=l+1;
         end
         range = k:(k+l);
@@ -220,7 +222,7 @@ for unit = 1:Nmachines
     for k = (histdepth-basemindownsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
         l=0;
-        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<=Machines{unit,7}(3))
+        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l+1)))<=Machines{unit,7}(3))
             l=l+1;
         end
         range = k:(k+l);
@@ -415,9 +417,12 @@ end
 %%%%%%%%%%%%%%%%%%%%%%
 %[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
 if Nnetworks~=0
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])));
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty));
 else
+    %TO BE ALIGNED WITH VARIABLE TIME MESH CONCEPT
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks);
+    %With dissipation penalty
+%     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks)+sum(Diss*Disspenalty);
 end
 
 coefcontainer=[coeffs{:}];
