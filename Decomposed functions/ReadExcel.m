@@ -8,7 +8,7 @@
 
 excelpath=fileparts(pwd());
 
-Filename='Input.xlsm';
+Filename='Input_EPS.xlsm';
 Filepath=strcat(excelpath,'\',Filename);
 
 [~,range]=xlsread(Filepath,'Demand','datarange');
@@ -31,6 +31,12 @@ for i=1:Nundisp
     UndProdall{i,2}=Undispnames(2,x(i):(x(i+1)-1));
     UndProdall{i,3}=Undisp(:,x(i):(x(i+1)-1))';
 end
+
+% load('minutely profiles');
+% Dall=[D{2}' zeros(525600,1) zeros(525600,1)];
+% UndProdall{1,3}=Undisp'/2;
+% UndProdall{2,3}=Undisp'/2*2.6;
+% Prices=ones(525600,1);
     
 %Simulation horizon and timestep settings
 basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
@@ -209,6 +215,9 @@ while ~isempty(netname)
     
     [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
 end    
+
+Networksall{1,4}=zeros(525600,1);
+Networksall{1,5}=zeros(525600,1);
 
 Nnetworks=i;
 

@@ -49,3 +49,13 @@ end
 % Tsp=[Tsp ones(1,round(n(end)))*deli(end)];
 
 data=ones(48/delt);
+
+Time=datetime(1900,1,1,0,0,0):hours(1):datetime(1900,12,31,23,59,0);
+TT=timetable(Time',D{2}');
+Time2=datetime(1900,1,1,0,0,0):minutes(1):datetime(1900,12,31,23,59,0);
+TT=retime(TT,Time2,'linear');
+D{2}=TT.Var1(:)';
+
+TT=timetable(Time',Undisp);
+TT=retime(TT,Time2,'linear');
+Undisp=TT.Undisp;

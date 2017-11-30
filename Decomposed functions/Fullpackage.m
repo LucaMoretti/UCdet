@@ -14,7 +14,7 @@ end
 
 suppresswarning=1;
 
-varstep=true;
+varstep=false;
 
 %SELECTION OF SIMULATION TYPE
 % 1 --> single batch
@@ -24,14 +24,14 @@ varstep=true;
 symtype = 2;
 
 %DATA FOR SYMTYPE #2
-nbatches = 52;
+nbatches = 24;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 24;
-roladvance = 5;
+roladvance = 6;
 
 %%Convexity check on/off 
-convcheck=false;
+convcheck=true;
 
 
 %Variables initialization (required to understand variables structure)
@@ -50,7 +50,7 @@ STORstart=0;
 
 % You might need to act on: ntimes, D, Fuels, Networks, UndProd
 
-waitbar(0.4,han,'Problem solution')
+waitbar(0.4,han,'Creation of model')
 
                         %%%%%%%%%%%%%%
                         %SINGLE BATCH%
@@ -84,6 +84,7 @@ if symtype==1 || (symtype==3&&roltsteps>=ntimestot)
     %Creation of parameters input vector
     Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
     %Problem solution and data gathering
+    waitbar(0.5,han,'Problem Solution')
     Solution
     DataGathering
   
@@ -138,6 +139,8 @@ elseif symtype==2
         actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(:),'UniformOutput',false);
         actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
+        Networks{:,4}=0;
+        Networks{:,5}=0;
         Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
         %Problem solution and data gathering
         Solution
@@ -188,6 +191,8 @@ elseif symtype==2
     actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(:),'UniformOutput',false);
     actualcoeffs=[actualcoeffs{:}];
     %Creation of parameters input vector
+    Networks{:,4}=0;
+    Networks{:,5}=0;
     Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
     %Problem solution and data gathering
     Solution

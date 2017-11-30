@@ -132,24 +132,24 @@ for i=1:Nmachines
     if ismember(Machines{i,2},[Fuels{:,1}])&&sum((INPUT{i}))>1e-6
         cont=cont+1;
         tags{cont}=strcat(Machines{i,1},' fuel');
-        costvals{cont}=(INPUT{i})'.*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
+        costvals{cont}=(INPUT{i})'.*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2}*timestep(1);
         cont=cont+1;
         tags{cont}=strcat(Machines{i,1},' start-up cost');
-        costvals{cont}=startflags(i,:)'.*SUcosts(i).*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2};
+        costvals{cont}=startflags(i,:)'.*SUcosts(i).*Fuels{ismember([Fuels{:,1}], Machines{i,2}),2}*timestep(1);
     end
 end
 for i=1:Nnetworks
     if sum((NETWORKbought(i,:)))>0
         cont=cont+1;
         tags{cont}=strcat(Networks{i,1}, 'bought from network');
-        costvals{cont}=(NETWORKbought(i,:)').*Networks{i,4};
+        costvals{cont}=(NETWORKbought(i,:)').*Networks{i,4}*timestep(1);
     end
 end
 for i=1:Noutputs
     if sum((slacks(i,:))) > 0
         cont=cont+1;
         tags{cont}=strcat(Outputs{i}, ' unmet demand');
-        costvals{cont}=(slacks(i,:))'.*slackcost(i);
+        costvals{cont}=(slacks(i,:))'.*slackcost(i)*timestep(1);
     end
 end
 for i=1:Nnetworks
@@ -157,7 +157,7 @@ for i=1:Nnetworks
         can=can+1;
         cont=cont+1;
         tags{cont}=strcat(Networks{i,1}, 'sold on network');
-        gainvals{can}=(NETWORKsold(i,:)').*Networks{i,5};
+        gainvals{can}=(NETWORKsold(i,:)').*Networks{i,5}*timestep(1),;
     end
 end
 

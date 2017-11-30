@@ -27,6 +27,7 @@ if symtype==1||symtype==2
     fuelusage=sol{en};
     en=en+1;
     startflags=sol{en};
+    STORstart=sol{en+2}';
 elseif  symtype==3
     st=1;
     en=Nmachines;

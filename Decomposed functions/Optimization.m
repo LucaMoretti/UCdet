@@ -71,7 +71,7 @@ zNET=binvar(Nnetworks,ntimes,'full');
 
 %Slack variables
 slacks=sdpvar(size(D{2},1),ntimes,'full');                       
-slackcost=ones(1,size(D{2},1))*1e7;
+slackcost=ones(1,size(D{2},1))*1e2;
 Constr = slacks >= 0;
 
 
@@ -241,20 +241,23 @@ Constr=[Constr Zext(:,(histdepth+1):end)-Zext(:,histdepth:(end-1))<=delta];
 
 Constr=[Constr STORAGEpin>=0];
 Constr=[Constr STORAGEpout>=0];
-   
+  
+FinStorCharge = sdpvar(1,Nstorages);
 
 for i=1:Nstorages
     Constr=[Constr STORAGEpower(i,:)==STORAGEpout(i,:)*Storages{i,6}-STORAGEpin(i,:)/Storages{i,4}];
-    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}.*zSTOR(i,:).*timestep'];    %limit in charge/discharge
-    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}.*(1-zSTOR(i,:)).*timestep'];    %limit in charge/discharge
+    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}.*zSTOR(i,:)];    %limit in charge/discharge
+    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}.*(1-zSTOR(i,:))];    %limit in charge/discharge
     Constr=[Constr STORAGEcharge(i,1)==STORstart(i)];    %energy content initial condition
     Constr=[Constr STORAGEcharge(i,2:end)==STORAGEcharge(i,1:(end-1)).*(1-Storages{i,7}.*timestep(1:end-1)')-(STORAGEpout(i,1:(end-1))-STORAGEpin(i,1:(end-1))).*timestep(1:end-1)']; %energy content evolution in time
     % Energy(k+1)=Energy(k)[kWh]-Power(k)[kW]*?t[h] <--- assicurati che
     % unità di misura siano coerenti!!!
     if symtype~=3
-        Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end)==STORstart(i)]; %cyclic storage charge condition  
+%         Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end)==STORstart(i)]; %cyclic storage charge condition  
+        Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end) == FinStorCharge(i)]; %final storage valorization
     end
     Constr=[Constr Storages{i,9}./100<=STORAGEcharge(i,:)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints
+    Constr=[Constr Storages{i,9}./100<=FinStorCharge(i)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints    
 end
 
 
@@ -409,8 +412,6 @@ if suppresswarning==1
     warning('on','all')
 end
 
-waitbar(0.6,han,'Problem Solution')
-
 %%%%%%%%%%%%%%%%%%%%%%
 % OBJECTIVE FUNCTION %
 %%%%%%%%%%%%%%%%%%%%%%
@@ -418,7 +419,7 @@ waitbar(0.6,han,'Problem Solution')
 if Nnetworks~=0
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])));
 else
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks);
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum(repmat(slackcost',1,ntimes).*slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge)*0.0001;
 end
 
 coefcontainer=[coeffs{:}];
@@ -431,7 +432,7 @@ elseif symtype==3
 end
 
 
-Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod};
+Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod FinStorCharge};
 
 ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
 
