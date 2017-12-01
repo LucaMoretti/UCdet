@@ -24,7 +24,7 @@ varstep=false;
 symtype = 2;
 
 %DATA FOR SYMTYPE #2
-nbatches = 24;
+nbatches = 365;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 24;

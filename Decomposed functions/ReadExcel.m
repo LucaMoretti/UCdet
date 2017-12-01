@@ -32,11 +32,11 @@ for i=1:Nundisp
     UndProdall{i,3}=Undisp(:,x(i):(x(i+1)-1))';
 end
 
-% load('minutely profiles');
-% Dall=[D{2}' zeros(525600,1) zeros(525600,1)];
-% UndProdall{1,3}=Undisp'/2;
-% UndProdall{2,3}=Undisp'/2*2.6;
-% Prices=ones(525600,1);
+load('minutely profiles');
+Dall=[D{2}' zeros(525600,1) zeros(525600,1)];
+UndProdall{1,3}=Undisp'/2;
+UndProdall{2,3}=Undisp'/2*2.6;
+Prices=ones(525600,1);
     
 %Simulation horizon and timestep settings
 basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
