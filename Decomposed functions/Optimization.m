@@ -245,8 +245,8 @@ Constr=[Constr STORAGEpout>=0];
 
 for i=1:Nstorages
     Constr=[Constr STORAGEpower(i,:)==STORAGEpout(i,:)*Storages{i,6}-STORAGEpin(i,:)/Storages{i,4}];
-    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}.*zSTOR(i,:).*timestep'];    %limit in charge/discharge
-    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}.*(1-zSTOR(i,:)).*timestep'];    %limit in charge/discharge
+    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}*zSTOR(i,:).*timestep'];    %limit in charge/discharge
+    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}*(1-zSTOR(i,:)).*timestep'];    %limit in charge/discharge
     Constr=[Constr STORAGEcharge(i,1)==STORstart(i)];    %energy content initial condition
     Constr=[Constr STORAGEcharge(i,2:end)==STORAGEcharge(i,1:(end-1)).*(1-Storages{i,7}.*timestep(1:end-1)')-(STORAGEpout(i,1:(end-1))-STORAGEpin(i,1:(end-1))).*timestep(1:end-1)']; %energy content evolution in time
     % Energy(k+1)=Energy(k)[kWh]-Power(k)[kW]*?t[h] <--- assicurati che
@@ -275,8 +275,8 @@ if Nnetworks~=0
             maxsold=min(Mbigspare,Networks{i,3});         
             maxbought=min(Mbigspare,Networks{i,2});
         end  
-        Constr=[Constr NETWORKsold(i,:) <= zNET(i,:) .* maxsold.*timestep'];
-        Constr=[Constr NETWORKbought(i,:) <= (1-zNET(i,:)) .* maxbought.*timestep'];
+        Constr=[Constr NETWORKsold(i,:) <= zNET(i,:) * maxsold.*timestep'];
+        Constr=[Constr NETWORKbought(i,:) <= (1-zNET(i,:)) * maxbought.*timestep'];
     end
 end
 
@@ -395,7 +395,7 @@ for j=1:Nfuels
         for h=1:numel(Machines{i,2})
             if isequal(Fuels{j,1},Machines{i,2}(h))
                 l=l+1;
-                Constr=[Constr fuelcons{j}(l,:)==INPUT{i}(h,:)+delta(i,:).*SUcosts(i)];
+                Constr=[Constr fuelcons{j}(l,:)==INPUT{i}(h,:)+delta(i,:)*SUcosts(i)];
             end
         end
     end
