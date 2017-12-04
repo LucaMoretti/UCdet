@@ -1,6 +1,6 @@
 %% MAIN ROUTINE
 clc
-read=false;
+read=true;
 
 tic
 
@@ -14,7 +14,7 @@ end
 
 suppresswarning=1;
 
-varstep=true;
+varstep=false;
 
 %SELECTION OF SIMULATION TYPE
 % 1 --> single batch
@@ -276,7 +276,7 @@ elseif symtype==3
         %Reshape profiles if variable timestep mesh is on                                 METTI TUTTO IN UNA FUNZIONE A PARTE
         if varstep    
             
-            temp=arrayfun(@(i) mean(D{2}(:,(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),2),1:length(n),'UniformOutput',false);
+            temp=arrayfun(@(i) mean(D{2}(:,(sum(n(1:(i-1)))+1:sum(n(1:i)))),2),1:length(n),'UniformOutput',false);
             D{2}=[temp{:}];
             Fuels(:,2)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i)))),1:length(n),'UniformOutput',false),Fuels(:,2),'UniformOutput',false),'UniformOutput',false);
             if Nundisp~=0
