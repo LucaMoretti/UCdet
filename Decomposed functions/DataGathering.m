@@ -1,5 +1,5 @@
 %% CREATION OF SOLUTION CELL ARRAY (Pmat)
-%cane
+
 %Prepare data for each produced good
 %Pmat: 
 %column1 --> Output name
