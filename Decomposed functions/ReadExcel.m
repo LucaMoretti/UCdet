@@ -33,10 +33,13 @@ for i=1:Nundisp
 end
 
 load('minutely profiles');
-Dall=[D{2}' zeros(525600,1) zeros(525600,1)];
+Interv=[1 7*1440-1];%3.21e5
+Undisp=Undisp(Interv(1):Interv(2));
+size_vec=length(Undisp);
+Dall=[D{2}(Interv(1):Interv(2))' zeros(size_vec,1) zeros(size_vec,1)];
 UndProdall{1,3}=Undisp'/2;
 UndProdall{2,3}=Undisp'/2*2.6;
-Prices=ones(525600,1);
+Prices=100*ones(size_vec,1);
     
 %Simulation horizon and timestep settings
 basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
@@ -200,6 +203,7 @@ Networksall={[] [] [] 0 0};
 %column3 --> max injection rate
 i=0;
 [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
+
 while ~isempty(netname)
     i=i+1;
     Networksall(i,1)=netname;
@@ -214,10 +218,10 @@ while ~isempty(netname)
     end
     
     [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
+    
+    Networksall{1,4}=zeros(size_vec,1);
+    Networksall{1,5}=zeros(size_vec,1);
 end    
-
-Networksall{1,4}=zeros(525600,1);
-Networksall{1,5}=zeros(525600,1);
 
 Nnetworks=i;
 

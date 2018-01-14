@@ -1,6 +1,6 @@
 %% MAIN ROUTINE
 clc
-read=false;
+read=true;
 
 tic
 
@@ -24,7 +24,7 @@ varstep=true;
 symtype = 3;
 
 %DATA FOR SYMTYPE #2
-nbatches = 365;
+nbatches = 2;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 36*60;
@@ -87,7 +87,7 @@ if symtype==1 || (symtype==3&&roltsteps>=ntimestot)
     waitbar(0.5,han,'Problem Solution')
     Solution
     DataGathering
-  
+    
                         %%%%%%%%%%%%%%%%%%%%
                         %CONTIGUOUS BATCHES%
                         %%%%%%%%%%%%%%%%%%%%
@@ -217,7 +217,7 @@ elseif symtype==3
         n=cell2mat(arrayfun(@(i) ones(1,N(i))*deltatimes(i),1:length(N),'UniformOutput',false));
         %n=[n{:}];
         ntimes=sum(N);
-        timestep=n'*basetimestep;
+        timestep=n';%*basetimestep;
     else
         ntimes=roltsteps;
         timestep=ones(ntimes,1)*basetimestep;
@@ -241,7 +241,7 @@ elseif symtype==3
     
     %Creation of problem structure
     Optimization
-    
+ 
     OnOffHist=zeros(Nmachines,histdepth);
     LastProd=zeros(1,Nmachines);
     %STORAGEcharge=bsxfun(@times,ones(size(STORAGEcharge)),cell2mat(Storages(:,10)));
@@ -252,9 +252,12 @@ elseif symtype==3
     end
     runcount=0;
     
+    tot_runs=floor(size(Dall{2},2)/roladvance);
+    
     while (ntimestot-tstart)>roltsteps
    
         runcount=runcount+1;
+        waitbar(0.4+0.5/tot_runs*runcount,han,strcat('Starting time ',num2str(tstart)))
         %Implementation of parameters values for current simulation instance
         D(2) = cellfun(@(x) x(:,tstart:(tstart+roltsteps-1)),Dall(2),'UniformOutput',false);
         Fuels(:,2) = cellfun(@(x) x(tstart:(tstart+roltsteps-1),:),Fuelsall(:,2),'UniformOutput',false);
@@ -278,16 +281,16 @@ elseif symtype==3
             
             temp=arrayfun(@(i) mean(D{2}(:,(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),2),1:length(n),'UniformOutput',false);
             D{2}=[temp{:}];
-            Fuels(:,2)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i)))),1:length(n),'UniformOutput',false),Fuels(:,2),'UniformOutput',false),'UniformOutput',false);
+            Fuels(:,2)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),1:length(n),'UniformOutput',false),Fuels(:,2),'UniformOutput',false),'UniformOutput',false);
             if Nundisp~=0
-                UndProd(:,3)=cellfun(@(k) cell2mat(k), cellfun(@(x) arrayfun(@(i) mean(x(:,sum(n(1:(i-1)))+1:sum(n(1:i))),2),1:length(n),'UniformOutput',false),UndProd(:,3),'UniformOutput',false),'UniformOutput',false);
+                UndProd(:,3)=cellfun(@(k) cell2mat(k), cellfun(@(x) arrayfun(@(i) mean(x(:,(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),2),1:length(n),'UniformOutput',false),UndProd(:,3),'UniformOutput',false),'UniformOutput',false);
             end
             if Nnetworks~=0
-                Networks(:,4:5)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i))),1),1:length(n),'UniformOutput',false),Networks(:,4:5),'UniformOutput',false),'UniformOutput',false);
+                Networks(:,4:5)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep)),1),1:length(n),'UniformOutput',false),Networks(:,4:5),'UniformOutput',false),'UniformOutput',false);
             end
             
             T4run=Tprof(tstart:(tstart+roltsteps-1));
-            T4run=arrayfun(@(i) mean(T4run(sum(n(1:(i-1)))+1:sum(n(1:i)))),1:length(n),'UniformOutput',false);
+            T4run=arrayfun(@(i) mean(T4run(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),1:length(n),'UniformOutput',false);
             T4run=[T4run{:}];
             
             C = cell(1,1,ntimes);
@@ -334,10 +337,10 @@ elseif symtype==3
         %starting time update update
         tstart=tstart+roladvance;   
     end
-    
+%%    
     %while tstart<=ntimestot                    %if data changes it might be better to shrink the horizon until you reach the end of the time horizon
         runcount=runcount+1;
-            
+        waitbar(0.4+0.5/tot_runs*runcount,han,strcat('Starting time ',num2str(tstart)))    
 %         if varstep
 %             N=[9 2 2 1];
 %             deltatimes=[basetimestep basetimestep*2 basetimestep*3 basetimestep*5];
@@ -376,9 +379,9 @@ elseif symtype==3
         %Creation of problem structure
         OnOffHisttemp=OnOffHist;
         LastProdtemp=LastProd;
-        temp=STORstart;
+        temp1=STORstart;
         Optimization    
-        STORstart=temp;
+        STORstart=temp1;
         OnOffHist=OnOffHisttemp;
         LastProd=LastProdtemp;
         %Implementation of parameters values for current simulation instance
@@ -465,9 +468,11 @@ elseif symtype==3
 end
 
 totalfo=sum(Obj)
-
+ dda
 waitbar(0.9,han,'Solution plotting')
 Plotting
 waitbar(1,han,'Simulation completed!')
 close(han) 
 toc
+
+save('RH_Sim_winter')

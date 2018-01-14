@@ -144,7 +144,12 @@ end
 %(1) ramp limits are assumed to be in x/h --> to obtain constraint coherent
 %with current timestep we just multiply that limit for timestep duration in
 %hours
-for i=1:Nmachines 
+for i=1:Nmachines
+    
+    if onoffflag(i)
+    Constr=[Constr Z(i)==1];
+    end
+    
     Constr=[Constr Z(i,:)*Machines{i,5}(1)<= INPUT{i}(:)' <= Z(i,:)*Machines{i,5}(2)];    %operation limit always referred to INPUT
     %Big M setted coherently with primary output of machine i (it is used
     %in ramp limit, which is referred to that output only
@@ -246,16 +251,16 @@ FinStorCharge = sdpvar(1,Nstorages);
 
 for i=1:Nstorages
     Constr=[Constr STORAGEpower(i,:)==STORAGEpout(i,:)*Storages{i,6}-STORAGEpin(i,:)/Storages{i,4}];
-    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}.*zSTOR(i,:)];    %limit in charge/discharge
-    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}.*(1-zSTOR(i,:))];    %limit in charge/discharge
+    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}*zSTOR(i,:)];    %limit in charge/discharge
+    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}*(1-zSTOR(i,:))];    %limit in charge/discharge
     Constr=[Constr STORAGEcharge(i,1)==STORstart(i)];    %energy content initial condition
     Constr=[Constr STORAGEcharge(i,2:end)==STORAGEcharge(i,1:(end-1)).*(1-Storages{i,7}.*timestep(1:end-1)')-(STORAGEpout(i,1:(end-1))-STORAGEpin(i,1:(end-1))).*timestep(1:end-1)']; %energy content evolution in time
     % Energy(k+1)=Energy(k)[kWh]-Power(k)[kW]*?t[h] <--- assicurati che
     % unità di misura siano coerenti!!!
-    if symtype~=3
+%     if symtype~=3
 %         Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end)==STORstart(i)]; %cyclic storage charge condition  
         Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end) == FinStorCharge(i)]; %final storage valorization
-    end
+%     end
     Constr=[Constr Storages{i,9}./100<=STORAGEcharge(i,:)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints
     Constr=[Constr Storages{i,9}./100<=FinStorCharge(i)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints    
 end
@@ -293,6 +298,7 @@ netprod=sdpvar(Noutputs,ntimes,'full');     %Net units production for each Outpu
 
 Diss=sdpvar(Noutputs,ntimes,'full');                                %NB: CURRENTLY NO UPPER LIMIT SET ON DISSIPATION!!!
 Constr=[Constr Diss>=0];
+%Constr=[Constr Diss<=repmat([0 inf inf]',1,ntimes)];
 
 for i=1:Noutputs
     nprod=0;
@@ -326,7 +332,7 @@ for j=1:Noutputs
         %Consumption by dispatchable machine i of good j
         if ismember(Outputs(j),Machines{i,2})
             l=l+1;
-            Constr=[Constr machcons{j}(l,:)==INPUT{i}(ismember(Machines{i,2},Outputs(j)),:)+delta(i,:).*SUcosts(i)];
+            Constr=[Constr machcons{j}(l,:)==INPUT{i}(ismember(Machines{i,2},Outputs(j)),:)+delta(i,:)*SUcosts(i)];
         end
 
     end
@@ -398,7 +404,7 @@ for j=1:Nfuels
         for h=1:numel(Machines{i,2})
             if isequal(Fuels{j,1},Machines{i,2}(h))
                 l=l+1;
-                Constr=[Constr fuelcons{j}(l,:)==INPUT{i}(h,:)+delta(i,:).*SUcosts(i)];
+                Constr=[Constr fuelcons{j}(l,:)==INPUT{i}(h,:)+delta(i,:)*SUcosts(i)];
             end
         end
     end
@@ -424,6 +430,7 @@ end
 
 coefcontainer=[coeffs{:}];
 Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:}};
+Param_opt=Param;
 % Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
 if symtype==2||symtype==1
     advance=ntimes+1;

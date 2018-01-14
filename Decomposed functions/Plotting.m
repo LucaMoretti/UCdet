@@ -123,6 +123,7 @@ for j=1:size(Pmat{i,12},1)
     set(h(L{i}(3)+L{i}(4)+L{i}(5)+j),'facecolor',color(j,:))
 end
 legend(gca,names)
+ax{i}=gca;
 set(gcf, 'Position', get(0,'Screensize')); % Maximize figure.
 hold off
 end
@@ -166,6 +167,7 @@ yyaxis left
 legnames=[{'Storage Charge Level'};{'Storage self-discharge'};{'Storage charge'};{'Storage charge loss'};{'Storage discharge'};{'Storage discharge loss'}];
 logictag=logical([1 L{i}(7) 1 L{i}(8) 1 L{i}(9)]);
 legend(gca,legnames(logictag))
+ax{fig}=gca;
 
 % ax(1)=gca                   %da sistemare poichè non funzica
 % yyaxis left
@@ -208,5 +210,9 @@ set(gca,'XTick', 0:4:24*days);
 plot(Obj,'k','LineWidth',2)
 tags{end+1}='Overall cost function';
 legend(gca,[tags{:}])
+ax{end+1}=gca;
+linkaxes([ax{:}],'x')
 set(gcf, 'Position', get(0,'Screensize')); % Maximize figure.
 hold off
+
+

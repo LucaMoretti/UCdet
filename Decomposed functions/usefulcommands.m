@@ -59,3 +59,27 @@ D{2}=TT.Var1(:)';
 TT=timetable(Time',Undisp);
 TT=retime(TT,Time2,'linear');
 Undisp=TT.Undisp;
+
+%% Dispatchment analysis
+Tot_cons=sum(cellfun(@(x)sum(x(:)),costvals,'UniformOutput',true))/100;
+DG_op=[mean(Pmat{1,3}(1,Pmat{1,3}(1,:)>0)/60);mean(Pmat{1,3}(2,Pmat{1,3}(2,:)>0)/90);mean(Pmat{1,3}(3,Pmat{1,3}(3,:)>0)/150);0];
+DG_temp=[sum(Pmat{1,3}(1,:)>0);sum(Pmat{1,3}(2,:)>0);sum(Pmat{1,3}(3,:)>0)]/60;%;sum(Pmat{1,3}(3,Pmat{1,3}(3,:)>0));sum(Pmat{1,3}(4,Pmat{1,3}(4,:)>0))];
+Demand=sum(Dall{1,2}(1,:))/60;
+DG_prod=sum(sum(Pmat{1,3}(1:2,:)))/60;
+PV_prod=(Demand-DG_prod)/(0.97);
+PV_tot=sum(sum([Pmat{2,11} Pmat{3,11}]))/60;
+Diss=sum(sum([Pmat{1:3,8}]))/60;
+Penetr=(Demand-DG_prod)/PV_tot;
+Stor_fin=Pmat{2,9}(1,end)+Pmat{3,9}(1,end);
+Outs=[Demand;DG_prod;PV_tot;Penetr;DG_op;Tot_cons];
+
+Diss=sum(Pmat{1,8}(:))+sum(Pmat{2,8}(:))+sum(Pmat{3,8}(:))/60;
+
+Powerbalance=(sum(sum(Pmat{1,3}))-sum(sum(Pmat{1,13}))-sum(sum((Dall{1,2}))))/60;%-sum(sum([Pmat{1:3,8}]))
+
+%% SOC
+figure(7)
+plot([1:10081],Pmat{2,9}+Pmat{3,9},'r',[1:10081],Pmat{2,9},'b-',[1:10081],Pmat{3,9},'b-.')
+title('Battery level summer Batches')
+xlabel('time [min]')
+ylabel('kWh')
