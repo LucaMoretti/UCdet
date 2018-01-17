@@ -135,6 +135,7 @@ for i=1:Nmachines
         end
  
     end
+     datestr(now,'HH:MM:SS.FFF')
 
 end
 
@@ -422,7 +423,6 @@ nompower=[60 90 150 230];
 
 deltaPVperc=0.5;
 
-
 %ICE reserve contribution
 PresICE=sdpvar(4,ntimes);
 Constr = [Constr PresICE <= Z(1:4,:).*repmat(nompower',1,ntimes)];
@@ -435,22 +435,26 @@ PVres=sdpvar(2,ntimes);                 %Tuned Outside
 Dres=sdpvar(1,ntimes);                  %Tuned Outside
 
 % PVtresh=sdpvar(2,ntimes);                                       
-% cont1=cellfun(@(x) x',UndProd(:,3),'UniformOutput',false);
-% cont1=[cont1{:}]';
+cont1=cellfun(@(x) x',UndProd(:,3),'UniformOutput',false);
+cont1=[cont1{:}]';
 % Constr = [Constr PVtresh == min(cat(3,repmat(Treshval,2,ntimes),cont1),3)]
-% Constr = [Constr PVres <= cont1*(1-deltaPVperc)]; 
+Constr = [Constr PVres <= cont1*(1-deltaPVperc)]; 
+Constr = [Constr Dres == D{2}(1,:)*1.25];
+ 
 % Constr = [Constr PVres <= cont1 - PVtresh];
 
 %BESS reserve contribution
 PresBESS=sdpvar(2,ntimes);
 Constr = [Constr PresBESS <= repmat(cell2mat(Storages(:,5)),1,ntimes)];
-Constr = [Constr PresBESS <= (STORAGEcharge(i,:) - Storages{i,2}.*Storages{i,9}./100).*repmat(cell2mat(Storages(:,6)),1,ntimes)./(repmat(timestep,2,1))];
+Constr = [Constr PresBESS <= (STORAGEcharge - repmat([Storages{:,2}]'.*[Storages{:,9}]'./100,1,ntimes)).*repmat(cell2mat(Storages(:,6)),1,ntimes)./(repmat(timestep',2,1))];
 
 %Inverter equivalent contribution
 PresInv=sdpvar(2,ntimes);
 Constr = [Constr PresInv <= (PVres + PresBESS)*0.97];                       %FIXED INVERTER EFFICIENCY
 Constr = [Constr PresInv <= repmat([125*0.97;125*0.97],1,ntimes)];          %FIXED INVERTER SIZES
 
+%Actual reserve contraint
+Constr = [Constr sum(PresInv,1)+sum(PresBESS,1) >= Dres];
 
 
 
@@ -466,7 +470,7 @@ end
 if Nnetworks~=0
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge'.*cell2mat(Storages(:,11)));
 else
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum(repmat(slackcost',1,ntimes).*slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge'.* cell2mat(Storages(:,11)));
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum(repmat(slackcost',1,ntimes).*slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge'.*cell2mat(Storages(:,11))); 
 end
 
 coefcontainer=[coeffs{:}];
