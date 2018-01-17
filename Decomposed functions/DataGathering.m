@@ -11,10 +11,14 @@
 %column7 --> Sold on network
 %column8 --> Dissipated
 %column9 --> Storage content
-%column10 --> Tags of dispatchable machines producing that good
-%column11 --> Output profile of each dispatchable machine
+%column10 --> Tags of undispatchable machines producing that good
+%column11 --> Output profile of each undispatchable machine
 %column12 --> Utility consumers tag
 %column13 --> Utility consumers consumption profile
+%column14 --> Storage self discharge power
+%column15 --> Charge dissipated flux
+%column16 --> Discharge dissipated flux
+%colum 17 --> Input profile of each dispatchable machine producing the good
 nstor=0;
 nnet=0;
 
@@ -34,9 +38,11 @@ for i=1:Noutputs
                 if f==0
                     Pmat{i,2}=Machines{j,1};
                     Pmat{i,3}=[(OUTPUT{j}(h,:))];
+                    Pmat{i,17}=[(INPUT{j})];
                 else
                     Pmat{i,2}=[Pmat{i,2};Machines{j,1}];
                     Pmat{i,3}=[Pmat{i,3};(OUTPUT{j}(h,:))];
+                    Pmat{i,17}=[Pmat{i,17};(INPUT{j})];
                 end
                 f=f+1;
             end
