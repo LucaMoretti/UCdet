@@ -468,9 +468,9 @@ end
 if Nnetworks~=0
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge'.*cell2mat(Storages(:,11)));
 else
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum(repmat(slackcost',1,ntimes).*slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge'.* cell2mat(Storages(:,11)));
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.repmat(timestep',[Nfuels 1]))))+sum(sum(repmat(slackcost',1,ntimes).slacks.repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge)*0.01;
+%     sum(FinStorCharge'.* cell2mat(Storages(:,11)) 
 end
-
 coefcontainer=[coeffs{:}];
 Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:} PVres Dres};
 Param_opt=Param;
