@@ -93,6 +93,7 @@ for i=1:Nmachines
     Machines{i,j}=xlsread(Filepath,'Machines',refranges{i,j});
     end
     flagsvector(i)=Machines{i,7}(1);
+    OnOffFlag(i)=Machines{i,8};
 end
 
 
@@ -191,8 +192,8 @@ Storages={[]};
 while ~isempty(storname)
     i=i+1;
     Storages(i,1)=storname;
-    storvals=xlsread(Filepath,'Stor&Net',strcat('B',num2str(2+i),':J',num2str(2+i)));
-    for j=2:10
+    storvals=xlsread(Filepath,'Stor&Net',strcat('B',num2str(2+i),':K',num2str(2+i)));
+    for j=2:length(storvals)+1
         Storages{i,j}=storvals(j-1);
     end
     [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(3+i)));
@@ -207,13 +208,13 @@ Networksall={[] [] [] 0 0};
 %column2 --> max withdrawal rate
 %column3 --> max injection rate
 i=0;
-[k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
+[k,netname]=xlsread(Filepath,'Stor&Net',strcat('M',num2str(3+i)));
 
 while ~isempty(netname)
     i=i+1;
     Networksall(i,1)=netname;
-    netvals{1}=xlsread(Filepath,'Stor&Net',strcat('M',num2str(2+i),':M',num2str(2+i)));
-    netvals{2}=xlsread(Filepath,'Stor&Net',strcat('N',num2str(2+i),':N',num2str(2+i)));
+    netvals{1}=xlsread(Filepath,'Stor&Net',strcat('N',num2str(2+i),':N',num2str(2+i)));
+    netvals{2}=xlsread(Filepath,'Stor&Net',strcat('O',num2str(2+i),':O',num2str(2+i)));
     for j=2:3
         if ~isempty(netvals{j-1})
             Networksall{i,j}=netvals{j-1};
@@ -222,7 +223,7 @@ while ~isempty(netname)
         end        
     end
     
-    [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
+    [k,netname]=xlsread(Filepath,'Stor&Net',strcat('M',num2str(3+i)));
     
     Networksall{1,4}=zeros(size_vec,1);
     Networksall{1,5}=zeros(size_vec,1);

@@ -444,15 +444,13 @@ Dres=sdpvar(1,ntimes);                  %Tuned Outside
 %BESS reserve contribution
 PresBESS=sdpvar(2,ntimes);
 Constr = [Constr PresBESS <= repmat(cell2mat(Storages(:,5)),1,ntimes)];
-Constr = [Constr PresBESS <= (STORAGEcharge - repmat([Storages{:,2}]'.*[Storages{:,9}]'./100,1,ntimes)).*repmat(cell2mat(Storages(:,6)),1,ntimes)./(repmat(timestep',2,1))];
+Constr = [Constr PresBESS <= (STORAGEcharge(i,:) - Storages{i,2}.*Storages{i,9}./100).*repmat(cell2mat(Storages(:,6)),1,ntimes)./(repmat(timestep,2,1))];
 
 %Inverter equivalent contribution
 PresInv=sdpvar(2,ntimes);
 Constr = [Constr PresInv <= (PVres + PresBESS)*0.97];                       %FIXED INVERTER EFFICIENCY
 Constr = [Constr PresInv <= repmat([125*0.97;125*0.97],1,ntimes)];          %FIXED INVERTER SIZES
 
-%Actual reserve contraint
-Constr = [Constr sum(PresInv,1)+sum(PresBESS,1) >= Dres];
 
 
 
@@ -472,7 +470,7 @@ else
 end
 
 coefcontainer=[coeffs{:}];
-Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:} PVres Dres};
+Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:}};
 Param_opt=Param;
 % Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
 if symtype==2||symtype==1
