@@ -422,7 +422,6 @@ nompower=[60 90 150 230];
 
 deltaPVperc=0.5;
 
-
 %ICE reserve contribution
 PresICE=sdpvar(4,ntimes);
 Constr = [Constr PresICE <= Z(1:4,:).*repmat(nompower',1,ntimes)];
@@ -435,10 +434,12 @@ PVres=sdpvar(2,ntimes);                 %Tuned Outside
 Dres=sdpvar(1,ntimes);                  %Tuned Outside
 
 % PVtresh=sdpvar(2,ntimes);                                       
-% cont1=cellfun(@(x) x',UndProd(:,3),'UniformOutput',false);
-% cont1=[cont1{:}]';
+cont1=cellfun(@(x) x',UndProd(:,3),'UniformOutput',false);
+cont1=[cont1{:}]';
 % Constr = [Constr PVtresh == min(cat(3,repmat(Treshval,2,ntimes),cont1),3)]
-% Constr = [Constr PVres <= cont1*(1-deltaPVperc)]; 
+Constr = [Constr PVres <= cont1*(1-deltaPVperc)]; 
+Constr = [Constr Dres == D{2}(1,:)*1.25];
+ 
 % Constr = [Constr PVres <= cont1 - PVtresh];
 
 %BESS reserve contribution
@@ -472,7 +473,7 @@ else
 end
 
 coefcontainer=[coeffs{:}];
-Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:} PVres Dres};
+Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:}};
 Param_opt=Param;
 % Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
 if symtype==2||symtype==1
