@@ -37,7 +37,7 @@ for i=1:Nundisp
 end
 
 load('minutely profiles');
-Interv=[3.21e5 3.21e5+7*1440-1];%3.21e5
+Interv=[3.21e5 3.21e5+1*1440-1];%3.21e5
 Undisp=Undisp(Interv(1):Interv(2));
 size_vec=length(Undisp);
 Dall=[D{2}(Interv(1):Interv(2))' zeros(size_vec,1) zeros(size_vec,1)];

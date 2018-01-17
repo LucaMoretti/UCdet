@@ -61,25 +61,36 @@ TT=retime(TT,Time2,'linear');
 Undisp=TT.Undisp;
 
 %% Dispatchment analysis
-Tot_cons=sum(cellfun(@(x)sum(x(:)),costvals,'UniformOutput',true))/100;
-DG_op=[mean(Pmat{1,3}(1,Pmat{1,3}(1,:)>0)/60);mean(Pmat{1,3}(2,Pmat{1,3}(2,:)>0)/90);mean(Pmat{1,3}(3,Pmat{1,3}(3,:)>0)/150);0];
-DG_temp=[sum(Pmat{1,3}(1,:)>0);sum(Pmat{1,3}(2,:)>0);sum(Pmat{1,3}(3,:)>0)]/60;%;sum(Pmat{1,3}(3,Pmat{1,3}(3,:)>0));sum(Pmat{1,3}(4,Pmat{1,3}(4,:)>0))];
-Demand=sum(Dall{1,2}(1,:))/60;
-DG_prod=sum(sum(Pmat{1,3}(1:2,:)))/60;
+Period_in=1440;
+Period_fin=1440*2;
+Tot_cons=sum(cellfun(@(x)sum(x(Period_in:Period_fin)),costvals,'UniformOutput',true))/100;
+DG_op=[mean(Pmat{1,3}(1,Pmat{1,3}(1,Period_in:Period_fin)>0)/60);mean(Pmat{1,3}(2,Pmat{1,3}(2,Period_in:Period_fin)>0)/90);mean(Pmat{1,3}(3,Pmat{1,3}(3,Period_in:Period_fin)>0)/150);0];
+DG_temp=[sum(Pmat{1,3}(1,Period_in:Period_fin)>0);sum(Pmat{1,3}(2,Period_in:Period_fin)>0);sum(Pmat{1,3}(3,Period_in:Period_fin)>0)]/60;%;sum(Pmat{1,3}(3,Pmat{1,3}(3,:)>0));sum(Pmat{1,3}(4,Pmat{1,3}(4,:)>0))];
+Demand=sum(Dall{1,2}(1,Period_in:Period_fin))/60;
+DG_prod=sum(sum(Pmat{1,3}(1:2,Period_in:Period_fin)))/60;
 PV_prod=(Demand-DG_prod)/(0.97);
-PV_tot=sum(sum([Pmat{2,11} Pmat{3,11}]))/60;
-Diss=sum(sum([Pmat{1:3,8}]))/60;
+PV_tot=sum(sum([Pmat{2,11}(Period_in:Period_fin) Pmat{3,11}(Period_in:Period_fin)]))/60;
+Diss=sum(sum([sum(Pmat{1,8}(Period_in:Period_fin)),sum(Pmat{1,8}(Period_in:Period_fin)),sum(Pmat{1,8}(Period_in:Period_fin))]))/60;
 Penetr=(Demand-DG_prod)/PV_tot;
-Stor_fin=Pmat{2,9}(1,end)+Pmat{3,9}(1,end);
+Stor_fin=Pmat{2,9}(1,Period_in:Period_fin)+Pmat{3,9}(1,Period_in:Period_fin);
 Outs=[Demand;DG_prod;PV_tot;Penetr;DG_op;Tot_cons];
 
-Diss=sum(Pmat{1,8}(:))+sum(Pmat{2,8}(:))+sum(Pmat{3,8}(:))/60;
+%Diss=sum(Pmat{1,8}(:))+sum(Pmat{2,8}(:))+sum(Pmat{3,8}(:))/60;
 
-Powerbalance=(sum(sum(Pmat{1,3}))-sum(sum(Pmat{1,13}))-sum(sum((Dall{1,2}))))/60;%-sum(sum([Pmat{1:3,8}]))
+Powerbalance=(sum(sum(Pmat{1,3}(Period_in:Period_fin)))-sum(sum(Pmat{1,13}(Period_in:Period_fin)))-sum(sum((Dall{1,2}(Period_in:Period_fin)))))/60;%-sum(sum([Pmat{1:3,8}]))
 
 %% SOC
 figure(7)
 plot([1:10081],Pmat{2,9}+Pmat{3,9},'r',[1:10081],Pmat{2,9},'b-',[1:10081],Pmat{3,9},'b-.')
+
+Disch=sum(sum([Pmat{2,4}(Period_in:Period_fin), Pmat{3,4}(Period_in:Period_fin)]))/60;
+Charg=sum(sum([Pmat{2,5}(Period_in:Period_fin), Pmat{3,5}(Period_in:Period_fin)]))/60;
 title('Battery level summer Batches')
 xlabel('time [min]')
 ylabel('kWh')
+%%
+FinalBESS=[Pmat{2,9}(Period_fin),Pmat{3,9}(Period_fin)];
+TotBESS=sum(FinalBESS);
+
+%%
+plot(Period_in:Period_fin,Pmat{2,9}(Period_in:Period_fin)+Pmat{3,9}(Period_in:Period_fin))

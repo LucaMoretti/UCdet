@@ -1,6 +1,6 @@
 %% MAIN ROUTINE
 clc
-read=true;
+read=false;
 
 tic
 
@@ -24,7 +24,7 @@ varstep=true;
 symtype = 3;
 
 %DATA FOR SYMTYPE #2
-nbatches = 2;
+nbatches = 6;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 24*60;
