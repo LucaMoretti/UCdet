@@ -27,10 +27,10 @@ symtype = 3;
 nbatches = 2;
 
 %DATA FOR SYMTYPE #3
-roltsteps = 36*60;
+roltsteps = 24*60;
 roladvance = 6*60;
 
-%%Convexity check on/off 
+%%Convexity check on/off
 convcheck=true;
 
 
@@ -52,9 +52,9 @@ STORstart=0;
 
 waitbar(0.4,han,'Creation of model')
 
-                        %%%%%%%%%%%%%%
-                        %SINGLE BATCH%
-                        %%%%%%%%%%%%%%
+%%%%%%%%%%%%%%
+%SINGLE BATCH%
+%%%%%%%%%%%%%%
 if symtype==1 || (symtype==3&&roltsteps>=ntimestot)
     
     %Simulation time horizon
@@ -88,9 +88,9 @@ if symtype==1 || (symtype==3&&roltsteps>=ntimestot)
     Solution
     DataGathering
     
-                        %%%%%%%%%%%%%%%%%%%%
-                        %CONTIGUOUS BATCHES%
-                        %%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%
+    %CONTIGUOUS BATCHES%
+    %%%%%%%%%%%%%%%%%%%%
 elseif symtype==2
     %Calculation of time horizon for each batch (last one is longer)
     tdur(1:(nbatches-1))= floor(ntimestot/nbatches);
@@ -113,7 +113,7 @@ elseif symtype==2
     %Creation of problem structure
     Optimization
     OnOffHist=zeros(Nmachines,histdepth);
-    LastProd=zeros(1,Nmachines);   
+    LastProd=zeros(1,Nmachines);
     if Nstorages~=0
         STORstart=cell2mat(Storages(:,10));
     else
@@ -144,7 +144,7 @@ elseif symtype==2
         Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
         %Problem solution and data gathering
         Solution
-        DataGathering        
+        DataGathering
         %starting time update update
         tstart=tstart+tdur(runcount);
         
@@ -171,7 +171,7 @@ elseif symtype==2
         OnOffHisttemp=OnOffHist;
         STORstarttemp=STORstart;
         LastProdtemp=LastProd;
-        Optimization    
+        Optimization
         STORstart=STORstarttemp;
         OnOffHist=OnOffHisttemp;
         LastProd=LastProdtemp;
@@ -196,24 +196,24 @@ elseif symtype==2
     Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
     %Problem solution and data gathering
     Solution
-    DataGathering        
+    DataGathering
     
-                        %%%%%%%%%%%%%%%%%
-                        %ROLLING HORIZON%
-                        %%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%
+    %ROLLING HORIZON%
+    %%%%%%%%%%%%%%%%%
 elseif symtype==3
     
     %Calculation of simulation numbers and duration
     nsims=ceil(ntimestot/roladvance);
-    tstart=1;    
+    tstart=1;
     if varstep
         T=roltsteps*basetimestep;   %Time horizon [h]
-        N=[360 72 18 12 12];
-        deltatimes=[basetimestep basetimestep*5 basetimestep*20 basetimestep*30 basetimestep*60];
+        N=[360 72 18 12];
+        deltatimes=[basetimestep basetimestep*5 basetimestep*20 basetimestep*30];
         if sum(N.*deltatimes) ~= T
             error('Selected timestep mesh is not consistent with selected time horizon')
-        end 
-        nsteps=deltatimes/basetimestep; 
+        end
+        nsteps=deltatimes/basetimestep;
         n=cell2mat(arrayfun(@(i) ones(1,N(i))*deltatimes(i),1:length(N),'UniformOutput',false));
         %n=[n{:}];
         ntimes=sum(N);
@@ -223,7 +223,7 @@ elseif symtype==3
         timestep=ones(ntimes,1)*basetimestep;
     end
     
-
+    
     
     %Preliminary variables initialization (required to understand variables structure)
     D(2) = cellfun(@(x) x(:,tstart:(tstart+ntimes-1)),Dall(2),'UniformOutput',false);
@@ -241,7 +241,7 @@ elseif symtype==3
     
     %Creation of problem structure
     Optimization
- 
+    
     OnOffHist=zeros(Nmachines,histdepth);
     LastProd=zeros(1,Nmachines);
     %STORAGEcharge=bsxfun(@times,ones(size(STORAGEcharge)),cell2mat(Storages(:,10)));
@@ -255,7 +255,7 @@ elseif symtype==3
     tot_runs=floor(size(Dall{2},2)/roladvance);
     
     while (ntimestot-tstart)>roltsteps
-   
+        
         runcount=runcount+1;
         waitbar(0.4+0.5/tot_runs*runcount,han,strcat('Starting time ',num2str(tstart)))
         %Implementation of parameters values for current simulation instance
@@ -273,11 +273,11 @@ elseif symtype==3
             Networks{:,4}=0;
             Networks{:,5}=0;
         end
-
+        
         
         
         %Reshape profiles if variable timestep mesh is on                                 METTI TUTTO IN UNA FUNZIONE A PARTE
-        if varstep    
+        if varstep
             
             temp=arrayfun(@(i) mean(D{2}(:,(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),2),1:length(n),'UniformOutput',false);
             D{2}=[temp{:}];
@@ -296,17 +296,17 @@ elseif symtype==3
             C = cell(1,1,ntimes);
             actualcoeffs=cell(ntimes,Nmachines);
             for i=1:Nmachines
-            t=Machines{i,4}{1};
-            if size(t,2)>1
-                x=cat(3,Machines{i,4}{2}{:});
-                x = permute(x,[3 1 2]);
-                C=interp1(t,x,T4run);
-                C = permute(C,[2 3 1]);
-                C=mat2cell(C,size(C,1),size(C,2),ones(size(C,3),1));
-            else
-                [C(:)]=deal(Machines{i,4}{2});
-            end
-            actualcoeffs(:,i)=(squeeze(C));          
+                t=Machines{i,4}{1};
+                if size(t,2)>1
+                    x=cat(3,Machines{i,4}{2}{:});
+                    x = permute(x,[3 1 2]);
+                    C=interp1(t,x,T4run);
+                    C = permute(C,[2 3 1]);
+                    C=mat2cell(C,size(C,1),size(C,2),ones(size(C,3),1));
+                else
+                    [C(:)]=deal(Machines{i,4}{2});
+                end
+                actualcoeffs(:,i)=(squeeze(C));
             end
             
             for i=1:Nmachines
@@ -326,38 +326,170 @@ elseif symtype==3
             actualcoeffs=[actualcoeffs{:}];
             actualslope=cellfun(@(x) x(:,:,tstart:(tstart+roltsteps-1)),slope(:),'UniformOutput',false);
             actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+roltsteps-1)),intercept(:),'UniformOutput',false);
-       
-        end   
-
+            
+        end
+        
         %Creation of parameters input vector
         Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
         %Problem solution and data gathering
         Solution
-        DataGathering        
+        DataGathering
         %starting time update update
-        tstart=tstart+roladvance;   
+        tstart=tstart+roladvance;
     end
-%%    
-    %while tstart<=ntimestot                    %if data changes it might be better to shrink the horizon until you reach the end of the time horizon
-        runcount=runcount+1;
-        waitbar(0.4+0.5/tot_runs*runcount,han,strcat('Starting time ',num2str(tstart)))    
-%         if varstep
-%             N=[9 2 2 1];
-%             deltatimes=[basetimestep basetimestep*2 basetimestep*3 basetimestep*5];
-%             nsteps=deltatimes/basetimestep; 
-%             n=cell2mat(arrayfun(@(i) ones(1,N(i))*deltatimes(i),1:length(N),'UniformOutput',false));
-%             ntimes=sum(N);
-%             timestep=n'*basetimestep;  
-%         else
-%         
+    %%
+    
+   
+    %final runs --> we need to recreate the problem since the size of the
+    %rolling horizon exceeds the simulation horizon!!
+    advanceTot=roltsteps/roladvance;
+    if varstep
+        
+        while tstart<ntimestot
+            
+            runcount=runcount+1;
+            waitbar(0.4+0.5/tot_runs*runcount,han,strcat('Starting time ',num2str(tstart)))
+            
+            roltsteps=ntimestot-tstart+1;
+            T=roltsteps*basetimestep;
+            advanceLeft=T/(roladvance*basetimestep);
+            cut=advanceTot-advanceLeft;
+            n=cell2mat(arrayfun(@(i) ones(1,N(i))*deltatimes(i),1:length(N)-cut,'UniformOutput',false));
+            
+            if round(sum(n))~=T
+                error('Adjust the definition of time steps to be consistent with remaining time horizon')
+            end
+            
+            ntimes=sum(N(1:end-cut));
+            timestep=n';
+            
+            %Preliminary variables initialization (required to understand variables structure)
+            D(2) = cellfun(@(x) x(:,tstart:(tstart+ntimes-1)),Dall(2),'UniformOutput',false);
+            Fuels(:,2) = cellfun(@(x) x(tstart:(tstart+ntimes-1),:),Fuelsall(:,2),'UniformOutput',false);
+            if Nundisp~=0
+                UndProd(:,3) = cellfun(@(x) x(:,tstart:(tstart+ntimes-1)),UndProdall(:,3),'UniformOutput',false);
+            else
+                UndProd=cell(1,3);
+                UndProd{1,3}=0;
+            end
+            if Nnetworks~=0
+                Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+ntimes-1)),Networksall(:,4:5),'UniformOutput',false);
+            end
+                     
+            
+            %Creation of problem structure
+            Optimization
+            
+            OnOffHist=zeros(Nmachines,histdepth);
+            LastProd=zeros(1,Nmachines);
+            %STORAGEcharge=bsxfun(@times,ones(size(STORAGEcharge)),cell2mat(Storages(:,10)));
+            if Nstorages~=0
+                STORstart=cell2mat(Storages(:,10));
+            else
+                STORstart=0;
+            end
+            runcount=0;
+            
+            tot_runs=floor(size(Dall{2},2)/roladvance);
+            
+            
+            runcount=runcount+1;
+            waitbar(0.4+0.5/tot_runs*runcount,han,strcat('Starting time ',num2str(tstart)))
+            %Implementation of parameters values for current simulation instance
+            D(2) = cellfun(@(x) x(:,tstart:(tstart+roltsteps-1)),Dall(2),'UniformOutput',false);
+            Fuels(:,2) = cellfun(@(x) x(tstart:(tstart+roltsteps-1),:),Fuelsall(:,2),'UniformOutput',false);
+            if Nundisp~=0
+                UndProd(:,3) = cellfun(@(x) x(:,tstart:(tstart+roltsteps-1)),UndProdall(:,3),'UniformOutput',false);
+            else
+                UndProd=cell(1,3);
+                UndProd{1,3}=0;
+            end
+            if Nnetworks~=0
+                Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+roltsteps-1)),Networksall(:,4:5),'UniformOutput',false);
+            else
+                Networks{:,4}=0;
+                Networks{:,5}=0;
+            end
+            
+            
+            
+            %Reshape profiles if variable timestep mesh is on                                 METTI TUTTO IN UNA FUNZIONE A PARTE
+            
+            
+            temp=arrayfun(@(i) mean(D{2}(:,(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),2),1:length(n),'UniformOutput',false);
+            D{2}=[temp{:}];
+            Fuels(:,2)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),1:length(n),'UniformOutput',false),Fuels(:,2),'UniformOutput',false),'UniformOutput',false);
+            if Nundisp~=0
+                UndProd(:,3)=cellfun(@(k) cell2mat(k), cellfun(@(x) arrayfun(@(i) mean(x(:,(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),2),1:length(n),'UniformOutput',false),UndProd(:,3),'UniformOutput',false),'UniformOutput',false);
+            end
+            if Nnetworks~=0
+                Networks(:,4:5)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep)),1),1:length(n),'UniformOutput',false),Networks(:,4:5),'UniformOutput',false),'UniformOutput',false);
+            end
+            
+            T4run=Tprof(tstart:(tstart+roltsteps-1));
+            T4run=arrayfun(@(i) mean(T4run(round(sum(n(1:(i-1))/basetimestep))+1:round(sum(n(1:i))/basetimestep))),1:length(n),'UniformOutput',false);
+            T4run=[T4run{:}];
+            
+            C = cell(1,1,ntimes);
+            actualcoeffs=cell(ntimes,Nmachines);
+            for i=1:Nmachines
+                t=Machines{i,4}{1};
+                if size(t,2)>1
+                    x=cat(3,Machines{i,4}{2}{:});
+                    x = permute(x,[3 1 2]);
+                    C=interp1(t,x,T4run);
+                    C = permute(C,[2 3 1]);
+                    C=mat2cell(C,size(C,1),size(C,2),ones(size(C,3),1));
+                else
+                    [C(:)]=deal(Machines{i,4}{2});
+                end
+                actualcoeffs(:,i)=(squeeze(C));
+            end
+            
+            clear actualintercept actualslope
+            
+            for i=1:Nmachines
+                for h=1:ntimes                            %for each time instant
+                    for f=1:(J(i)-1)                    %for each segment
+                        for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
+                            actualslope{i,1}(f,k,h)=(actualcoeffs{h,i}(f+1,1)-actualcoeffs{h,i}(f,1))/(actualcoeffs{h,i}(f+1,1+k)-actualcoeffs{h,i}(f,1+k));
+                            actualintercept{i,1}(f,k,h)=actualcoeffs{h,i}(f+1,1)-slope{i}(f,k,h)*actualcoeffs{h,i}(f+1,1+k);
+                        end
+                    end
+                end
+            end
+            
+            
+            
+            %Creation of parameters input vector
+            Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
+            %Problem solution and data gathering
+            Solution
+            DataGathering
+            %starting time update update
+            tstart=tstart+roladvance;
+            
+        end
+    else
+        %while tstart<=ntimestot                    %if data changes it might be better to shrink the horizon until you reach the end of the time horizon
+        
+        %         if varstep
+        %             N=[9 2 2 1];
+        %             deltatimes=[basetimestep basetimestep*2 basetimestep*3 basetimestep*5];
+        %             nsteps=deltatimes/basetimestep;
+        %             n=cell2mat(arrayfun(@(i) ones(1,N(i))*deltatimes(i),1:length(N),'UniformOutput',false));
+        %             ntimes=sum(N);
+        %             timestep=n'*basetimestep;
+        %         else
+        %
         %final runs --> we need to recreate the problem since the size of the
         %rolling horizon exceeds the simulation horizon!!
         minhorizon=max(histdepth+2,6);
         %if ntimestot-roladvance-tstart+1<=minhorizon
-            ntimes=ntimestot-tstart+1;
-            roladvance=ntimestot-tstart+1;
-            timestep=ones(ntimes,1)*basetimestep;
-%         end
+        ntimes=ntimestot-tstart+1;
+        roladvance=ntimestot-tstart+1;
+        timestep=ones(ntimes,1)*basetimestep;
+        %         end
         %else
         %    ntimes=ntimestot-tstart+1;
         %end
@@ -380,7 +512,7 @@ elseif symtype==3
         OnOffHisttemp=OnOffHist;
         LastProdtemp=LastProd;
         temp1=STORstart;
-        Optimization    
+        Optimization
         STORstart=temp1;
         OnOffHist=OnOffHisttemp;
         LastProd=LastProdtemp;
@@ -401,70 +533,72 @@ elseif symtype==3
         end
         
         
-%         if varstep    
-%             
-%             temp=arrayfun(@(i) mean(D{2}(:,(sum(n(1:(i-1)))+1:sum(n(1:i)))),2),1:length(n),'UniformOutput',false);
-%             D{2}=[temp{:}];
-%             Fuels(:,2)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i)))),1:length(n),'UniformOutput',false),Fuels(:,2),'UniformOutput',false),'UniformOutput',false);
-%             if Nundisp~=0
-%                 UndProd(:,3)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i))),2),1:length(n),'UniformOutput',false),UndProd(:,3),'UniformOutput',false),'UniformOutput',false);
-%             end
-%             if Nnetworks~=0
-%                 Networks(:,4:5)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i))),1),1:length(n),'UniformOutput',false),Networks(:,4:5),'UniformOutput',false),'UniformOutput',false);
-%             end
-%             
-%             T4run=Tprof(tstart:(tstart+roltsteps-1));
-%             T4run=arrayfun(@(i) mean(T4run(sum(n(1:(i-1)))+1:sum(n(1:i)))),1:length(n),'UniformOutput',false);
-%             T4run=[T4run{:}];
-%             
-%             C = cell(1,1,ntimes);
-%             actualcoeffs=cell(ntimes,Nmachines);
-%             for i=1:Nmachines
-%             t=Machines{i,4}{1};
-%             if size(t,2)>1
-%                 x=cat(3,Machines{i,4}{2}{:});
-%                 x = permute(x,[3 1 2]);
-%                 C=interp1(t,x,T4run);
-%                 C = permute(C,[2 3 1]);
-%                 C=mat2cell(C,size(C,1),size(C,2),ones(size(C,3),1));
-%             else
-%                 [C(:)]=deal(Machines{i,4}{2});
-%             end
-%             actualcoeffs(:,i)=(squeeze(C));          
-%             end
-%             
-%             for i=1:Nmachines
-%                 for h=1:ntimes                            %for each time instant
-%                     for f=1:(J(i)-1)                    %for each segment
-%                         for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
-%                             actualslope{i,1}(f,k,h)=(actualcoeffs{h,i}(f+1,1)-actualcoeffs{h,i}(f,1))/(actualcoeffs{h,i}(f+1,1+k)-actualcoeffs{h,i}(f,1+k));
-%                             actualintercept{i,1}(f,k,h)=actualcoeffs{h,i}(f+1,1)-slope{i}(f,k,h)*actualcoeffs{h,i}(f+1,1+k);
-%                         end
-%                     end
-%                 end
-%             end
-%             
-%         else
-            
-            actualcoeffs=(cellfun(@(x) x(tstart:(tstart+ntimes-1)),{Machines{:,8}},'UniformOutput',false));
-            actualcoeffs=[actualcoeffs{:}];
-            actualslope=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),slope(:),'UniformOutput',false);
-            actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),intercept(:),'UniformOutput',false);
-       
-%         end
+        %         if varstep
+        %
+        %             temp=arrayfun(@(i) mean(D{2}(:,(sum(n(1:(i-1)))+1:sum(n(1:i)))),2),1:length(n),'UniformOutput',false);
+        %             D{2}=[temp{:}];
+        %             Fuels(:,2)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i)))),1:length(n),'UniformOutput',false),Fuels(:,2),'UniformOutput',false),'UniformOutput',false);
+        %             if Nundisp~=0
+        %                 UndProd(:,3)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i))),2),1:length(n),'UniformOutput',false),UndProd(:,3),'UniformOutput',false),'UniformOutput',false);
+        %             end
+        %             if Nnetworks~=0
+        %                 Networks(:,4:5)=cellfun(@(k) cell2mat(k)', cellfun(@(x) arrayfun(@(i) mean(x(sum(n(1:(i-1)))+1:sum(n(1:i))),1),1:length(n),'UniformOutput',false),Networks(:,4:5),'UniformOutput',false),'UniformOutput',false);
+        %             end
+        %
+        %             T4run=Tprof(tstart:(tstart+roltsteps-1));
+        %             T4run=arrayfun(@(i) mean(T4run(sum(n(1:(i-1)))+1:sum(n(1:i)))),1:length(n),'UniformOutput',false);
+        %             T4run=[T4run{:}];
+        %
+        %             C = cell(1,1,ntimes);
+        %             actualcoeffs=cell(ntimes,Nmachines);
+        %             for i=1:Nmachines
+        %             t=Machines{i,4}{1};
+        %             if size(t,2)>1
+        %                 x=cat(3,Machines{i,4}{2}{:});
+        %                 x = permute(x,[3 1 2]);
+        %                 C=interp1(t,x,T4run);
+        %                 C = permute(C,[2 3 1]);
+        %                 C=mat2cell(C,size(C,1),size(C,2),ones(size(C,3),1));
+        %             else
+        %                 [C(:)]=deal(Machines{i,4}{2});
+        %             end
+        %             actualcoeffs(:,i)=(squeeze(C));
+        %             end
+        %
+        %             for i=1:Nmachines
+        %                 for h=1:ntimes                            %for each time instant
+        %                     for f=1:(J(i)-1)                    %for each segment
+        %                         for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
+        %                             actualslope{i,1}(f,k,h)=(actualcoeffs{h,i}(f+1,1)-actualcoeffs{h,i}(f,1))/(actualcoeffs{h,i}(f+1,1+k)-actualcoeffs{h,i}(f,1+k));
+        %                             actualintercept{i,1}(f,k,h)=actualcoeffs{h,i}(f+1,1)-slope{i}(f,k,h)*actualcoeffs{h,i}(f+1,1+k);
+        %                         end
+        %                     end
+        %                 end
+        %             end
+        %
+        %         else
         
-%         actualcoeffs=cellfun(@(x) x(tstart:(tstart+ntimes-1)),{Machines{:,8}},'UniformOutput',false);
-%         actualcoeffs=[actualcoeffs{:}];
-%         actualslope=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),slope(:),'UniformOutput',false);
-%         actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),intercept(:),'UniformOutput',false);
+        actualcoeffs=(cellfun(@(x) x(tstart:(tstart+ntimes-1)),{Machines{:,8}},'UniformOutput',false));
+        actualcoeffs=[actualcoeffs{:}];
+        actualslope=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),slope(:),'UniformOutput',false);
+        actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),intercept(:),'UniformOutput',false);
+        
+        %         end
+        
+        %         actualcoeffs=cellfun(@(x) x(tstart:(tstart+ntimes-1)),{Machines{:,8}},'UniformOutput',false);
+        %         actualcoeffs=[actualcoeffs{:}];
+        %         actualslope=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),slope(:),'UniformOutput',false);
+        %         actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+ntimes-1)),intercept(:),'UniformOutput',false);
         %Creation of parameters input vector
         Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
         %Problem solution and data gathering
         Solution
-        DataGathering   
+        DataGathering
         tstart=tstart+roladvance;
-    %end
-    
+        %end
+        
+    end
+
 end
 
 totalfo=sum(Obj)

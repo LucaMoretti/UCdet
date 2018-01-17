@@ -425,7 +425,7 @@ end
 if Nnetworks~=0
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge)*0.0001;
 else
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum(repmat(slackcost',1,ntimes).*slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge)*0.0001;
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum(repmat(slackcost',1,ntimes).*slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge)*0.01;
 end
 
 coefcontainer=[coeffs{:}];
@@ -441,7 +441,7 @@ end
 
 Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod FinStorCharge};
 
-ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'gurobi.MIPGapAbs',5e-2,'verbose',3);
+ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'gurobi.MIPGapAbs',5e-1,'verbose',3);
 
 Model=optimizer(Constr,Objective,ops,Param,Outs);
 
