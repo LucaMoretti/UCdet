@@ -12,6 +12,10 @@ Filename='Input_EPS.xlsm';
 Filepath=strcat(excelpath,'\',Filename);
 
 [~,range]=xlsread(Filepath,'Demand','datarange');
+[~,dissrange]=xlsread(Filepath,'Demand','dissrange');
+[~,~,maxdiss]=xlsread(Filepath,'Demand',dissrange{1});
+maxdiss(cellfun(@(x) ischar(x),maxdiss))={Inf};
+maxdiss=cell2mat(maxdiss);
 [Dall,Dnames]=xlsread(Filepath,'Demand',range{1});
 [~,range]=xlsread(Filepath,'Undispatch','ddatarange');
 if ~isempty(range) 
@@ -67,7 +71,7 @@ ExcelApp.release;
 Dall={{Dnames{:}}' Dall'}; 
 
 Nmachines=double(Nmachines);
-[~,range]=xlsread(Filepath,'DATA','I2');
+[~,range]=xlsread(Filepath,'DATA','rangeread');
 [~,refranges]=xlsread(Filepath,'DATA',range{1});
 
 %INPUT DATA: 
@@ -78,13 +82,14 @@ Nmachines=double(Nmachines);
 %column5 --> operation limits (on first output)
 %column6 --> ramp limits (on first output)
 %column7 --> SU/SD times, penalty and min up times                          NB: SU time substituted with exclusive on flag (column 1 of group 7)
+%column8 --> OnOffFlag
 
 %Each row corresponds to a different machine
 for i=1:Nmachines
     for j=1:3
     [~, Machines{i,j}]=xlsread(Filepath,'Machines',refranges{i,j});
     end
-    for j=4:7
+    for j=4:8
     Machines{i,j}=xlsread(Filepath,'Machines',refranges{i,j});
     end
     flagsvector(i)=Machines{i,7}(1);

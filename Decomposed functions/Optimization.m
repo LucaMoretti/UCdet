@@ -146,8 +146,8 @@ end
 %hours
 for i=1:Nmachines
     
-    if onoffflag(i)
-    Constr=[Constr Z(i)==1];
+    if Machines{i,5}
+    Constr=[Constr Z(i,:)==1];
     end
     
     Constr=[Constr Z(i,:)*Machines{i,5}(1)<= INPUT{i}(:)' <= Z(i,:)*Machines{i,5}(2)];    %operation limit always referred to INPUT
@@ -237,7 +237,7 @@ end
 
 % Startup flag
 delta=sdpvar(Nmachines, ntimes, 'full');
-Constr=[Constr 0<= delta<= 1];
+Constr=[Constr 0<= delta <= 1];
 Constr=[Constr Zext(:,(histdepth+1):end)-Zext(:,histdepth:(end-1))<=delta];
 
 %%%%%%%%%%%%%%%%%%%%%%%
@@ -298,7 +298,7 @@ netprod=sdpvar(Noutputs,ntimes,'full');     %Net units production for each Outpu
 
 Diss=sdpvar(Noutputs,ntimes,'full');                                %NB: CURRENTLY NO UPPER LIMIT SET ON DISSIPATION!!!
 Constr=[Constr Diss>=0];
-%Constr=[Constr Diss<=repmat([0 inf inf]',1,ntimes)];
+Constr=[Constr Diss<=repmat(maxdiss',1,ntimes)];
 
 for i=1:Noutputs
     nprod=0;
@@ -423,7 +423,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%
 %[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
 if Nnetworks~=0
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])));
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge)*0.0001;
 else
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum(repmat(slackcost',1,ntimes).*slacks.*repmat(timestep',[size(D{2},1) 1])))-sum(FinStorCharge)*0.0001;
 end
