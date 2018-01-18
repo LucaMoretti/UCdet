@@ -45,7 +45,7 @@ Dall=[D{2}(Interv(1):Interv(2))'];
 % UndProdall{1,3}=Undisp'/2;
 % UndProdall{2,3}=Undisp'/2*2.6;
 UndProdall{1,3}=Undisp'/2+Undisp'/2*2.6;
-Prices=60000*ones(size_vec,1);
+Prices=1100*ones(size_vec,1);
     
 %Simulation horizon and timestep settings
 basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]

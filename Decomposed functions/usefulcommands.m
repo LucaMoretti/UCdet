@@ -73,6 +73,7 @@ Penetr=(Demand-DG_prod)/PV_tot;
 Stor_fin=Pmat{2,9}(1,end)+Pmat{3,9}(1,end);
 Outs=[Demand;DG_prod;PV_tot;Penetr;DG_op;Tot_cons];
 
+
 Diss=sum(Pmat{1,8}(:))+sum(Pmat{2,8}(:))+sum(Pmat{3,8}(:))/60;
 
 Powerbalance=(sum(sum(Pmat{1,3}))-sum(sum(Pmat{1,13}))-sum(sum((Dall{1,2}))))/60;%-sum(sum([Pmat{1:3,8}]))
