@@ -25,7 +25,7 @@ nnet=0;
 
 if symtype == 1 
 
-Pmat=cell(Noutputs,16);
+Pmat=cell(Noutputs,17);
 for i=1:Noutputs
     nprod=0;
     Pmat{i,1}=Outputs{i};
@@ -180,7 +180,7 @@ elseif symtype == 2 || symtype == 3
     
 if runcount == 1
     
-Pmat=cell(Noutputs,16);
+Pmat=cell(Noutputs,17);
 for i=1:Noutputs
     nprod=0;
     Pmat{i,1}=Outputs{i};
@@ -193,9 +193,11 @@ for i=1:Noutputs
                 if f==0
                     Pmat{i,2}=Machines{j,1};
                     Pmat{i,3}=[(OUTPUT{j}(h,:))];
+                    Pmat{i,17}=[(INPUT{j})];
                 else
                     Pmat{i,2}=[Pmat{i,2};Machines{j,1}];
                     Pmat{i,3}=[Pmat{i,3};(OUTPUT{j}(h,:))];
+                    Pmat{i,17}=[Pmat{i,17};(INPUT{j})];
                 end
                 f=f+1;
             end
@@ -347,6 +349,7 @@ for i=1:Noutputs
             if isequal(Outputs(i),Machines{j,3}(h)) %&& sum((OUTPUT{j}(h,:)))>1e-6  %condizione da rivedere anche in fase creazione matrice
                 f=f+1;
                 Pmat{i,3}(f,pos)=[(OUTPUT{j}(h,:))];
+                Pmat{i,17}(f,pos)=[(INPUT{j})];
             end
         end
         %Consumption by machine i of good j
