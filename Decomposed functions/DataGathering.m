@@ -11,8 +11,8 @@
 %column7 --> Sold on network
 %column8 --> Dissipated
 %column9 --> Storage content
-%column10 --> Tags of dispatchable machines producing that good
-%column11 --> Output profile of each dispatchable machine
+%column10 --> Tags of non-dispatchable machines producing that good
+%column11 --> Output profile of each non-dispatchable machine
 %column12 --> Utility consumers tag
 %column13 --> Utility consumers consumption profile
 nstor=0;
@@ -187,9 +187,11 @@ for i=1:Noutputs
                 if f==0
                     Pmat{i,2}=Machines{j,1};
                     Pmat{i,3}=[(OUTPUT{j}(h,:))];
+                    Pmat{i,17}=[(INPUT{j})];
                 else
                     Pmat{i,2}=[Pmat{i,2};Machines{j,1}];
                     Pmat{i,3}=[Pmat{i,3};(OUTPUT{j}(h,:))];
+                    Pmat{i,17}=[Pmat{i,17};(INPUT{j})];
                 end
                 f=f+1;
             end
@@ -341,6 +343,7 @@ for i=1:Noutputs
             if isequal(Outputs(i),Machines{j,3}(h)) %&& sum((OUTPUT{j}(h,:)))>1e-6  %condizione da rivedere anche in fase creazione matrice
                 f=f+1;
                 Pmat{i,3}(f,pos)=[(OUTPUT{j}(h,:))];
+                Pmat{i,17}(f,pos)=[(INPUT{j})];
             end
         end
         %Consumption by machine i of good j
