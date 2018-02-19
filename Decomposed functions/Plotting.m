@@ -84,6 +84,7 @@ grey = [0.4,0.4,0.4];
 
 %Plot all demand / production profiles
 for i=1:Noutputs
+    if (size([Pmat{i,4}' Pmat{i,6}' -Pmat{i,13}' Pmat{i,3}' Pmat{i,11}' Pmat{i,5}' -Pmat{i,7}' -Pmat{i,8}' -Pmat{i,13}'],2)~=0)&&sum(sum([Pmat{i,4}' Pmat{i,6}' -Pmat{i,13}' Pmat{i,3}' Pmat{i,11}' Pmat{i,5}' -Pmat{i,7}' -Pmat{i,8}' -Pmat{i,13}']))~=0
 figure()
 title(strcat(Outputs{i},' Demand / Production profiles'))
 xlabel('Timestep')
@@ -94,7 +95,9 @@ prodnames=[Pmat{i,2}' Pmat{i,10}']';
 stdval={Pmat{i,4}' Pmat{i,6}'};
 k = bar([Pmat{i,3}' Pmat{i,11}' stdval{L{i}(1:2)}],0.6,'stacked');   
 stdval={Pmat{i,5}' -Pmat{i,7}' -Pmat{i,8}' -Pmat{i,13}'};
+if ~isempty([stdval{L{i}(3:5)} -Pmat{i,13}'])
 h = bar([stdval{L{i}(3:5)} -Pmat{i,13}'],0.6,'stacked');
+end
 plot(Dall{2}(i,:),'k','LineWidth',2)
 names=[prodnames ;stdnam(L{i}(1:5)); Pmat{i,12}];
 color=parula(max(size(prodnames,1),5));
@@ -123,8 +126,10 @@ for j=1:size(Pmat{i,12},1)
     set(h(L{i}(3)+L{i}(4)+L{i}(5)+j),'facecolor',color(j,:))
 end
 legend(gca,names)
+ax{i}=gca;
 set(gcf, 'Position', get(0,'Screensize')); % Maximize figure.
 hold off
+    end
 end
 
 fig=i;
@@ -166,6 +171,7 @@ yyaxis left
 legnames=[{'Storage Charge Level'};{'Storage self-discharge'};{'Storage charge'};{'Storage charge loss'};{'Storage discharge'};{'Storage discharge loss'}];
 logictag=logical([1 L{i}(7) 1 L{i}(8) 1 L{i}(9)]);
 legend(gca,legnames(logictag))
+ax{fig}=gca;
 
 % ax(1)=gca                   %da sistemare poichè non funzica
 % yyaxis left
@@ -208,5 +214,7 @@ set(gca,'XTick', 0:4:24*days);
 plot(Obj,'k','LineWidth',2)
 tags{end+1}='Overall cost function';
 legend(gca,[tags{:}])
+ax{end+1}=gca;
+linkaxes([ax{:}],'x')
 set(gcf, 'Position', get(0,'Screensize')); % Maximize figure.
 hold off

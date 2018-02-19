@@ -8,7 +8,7 @@ global convcheck
 
 excelpath=fileparts(pwd());
 
-Filename='Input riccardo.xlsm';
+Filename='Input - V_PVT.xlsm';
 Filepath=strcat(excelpath,'\',Filename);
 
 [~,range]=xlsread(Filepath,'Demand','datarange');
@@ -107,7 +107,7 @@ exclusivegroups=length(exclusivetags);
 
 
 a=cellfun(@(x) x(:,2:3),Machines(:,7),'UniformOutput',false);
-histdepth=ceil(max([a{:}])/basetimestep);                                          %already in number of timesteps
+histdepth=max([ceil(max([a{:}])/basetimestep) 1]);                                          %already in number of timesteps
 
 
 
@@ -152,14 +152,20 @@ for i=1:Nmachines
         x=cat(3,Machines{i,4}{2}{:});
         if size(Machines{i,9},2)>1
             x=num2cell(x,3);
-            F=cellfun(@(x) scatteredInterpolant(t,squeeze(x)),x,'UniformOutput',false);
+            F=cellfun(@(x) scatteredInterpolant(t,squeeze(x),'linear','none'),x,'UniformOutput',false);
             Machines{i,8}=cell2mat(cellfun(@(x) permute(x(ambprof),[2 3 1]),F,'UniformOutput',false));
+            tempvar=Machines{i,8}(:,1,:);
+            tempvar(isnan(tempvar))=1000;
+            Machines{i,8}(:,1,:)=tempvar;
+            tempvar=Machines{i,8}(:,2:end,:);
+            tempvar(isnan(tempvar))=-100000;
+            Machines{i,8}(:,2:end,:)=tempvar;
             [x1 x2 x3] = size(Machines{i,8});
             Machines{i,8}=squeeze(mat2cell(Machines{i,8}, x1, x2, ones(1,x3)));
 %             Machines{i,8}=cellfun(@(x) mat2cell(x),Machines{i,8},'UniformOutput',false);
         elseif size(Machines{i,9},2)==1
             x = permute(x,[3 1 2]);
-            C=interp1(t,x,ambprof);
+            C=interp1(t,x,ambprof,'linear',0);
             C = permute(C,[2 3 1]);
             C=mat2cell(C,size(C,1),size(C,2),ones(size(C,3),1));
             Machines{i,8}=squeeze(C);
@@ -265,7 +271,7 @@ end
 Nnetworks=i;
 
 for i=1:Noutputs
-M(i)=max(Dall{2}(i,:))*10;  %M1 related to maximum good demand (an order of magnitude higher
+M(i)=max(Dall{2}(i,:))*100;  %M1 related to maximum good demand (an order of magnitude higher
 end
 Mbigspare=max(M);
 

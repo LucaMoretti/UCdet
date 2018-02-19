@@ -8,7 +8,7 @@ end
 %Variable time resolution
 %timestep=sdpvar(ntimes-1,1,'full');
 
-Disspenalty=100;
+Disspenalty=0;
 
 %Binary variables for machines
 Z=binvar(Nmachines,ntimes,'full');
@@ -186,7 +186,8 @@ for i=1:exclusivegroups
 end
             
 for i=1:exclusivegroups
-    Constr=[Constr sum(Z(logicflags(:,i),:))<=1];
+%     Constr=[Constr sum(Z(logicflags(:,i),:))<=1];
+    Constr=[Constr sum(Z(logicflags(:,i),:))==1];  %ONLIFORRICH
 end
 
 
@@ -206,7 +207,7 @@ for unit = 1:Nmachines
     for k = (histdepth-baseminupsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
         l=0;
-        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l+1)))<=Machines{unit,7}(2))
+        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<Machines{unit,7}(2))
             l=l+1;
         end
         range = k:(k+l);
@@ -222,7 +223,7 @@ for unit = 1:Nmachines
     for k = (histdepth-basemindownsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
         l=0;
-        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l+1)))<=Machines{unit,7}(3))
+        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<Machines{unit,7}(3))
             l=l+1;
         end
         range = k:(k+l);
@@ -243,20 +244,31 @@ Constr=[Constr Zext(:,(histdepth+1):end)-Zext(:,histdepth:(end-1))<=delta];
 
 Constr=[Constr STORAGEpin>=0];
 Constr=[Constr STORAGEpout>=0];
+
+FinStorCharge = sdpvar(1,Nstorages);
    
+%ONLYFORRICH
+ngroups=floor(ntimes/24);
+
 
 for i=1:Nstorages
     Constr=[Constr STORAGEpower(i,:)==STORAGEpout(i,:)*Storages{i,6}-STORAGEpin(i,:)/Storages{i,4}];
-    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}.*zSTOR(i,:).*timestep'];    %limit in charge/discharge
-    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}.*(1-zSTOR(i,:)).*timestep'];    %limit in charge/discharge
+    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}.*zSTOR(i,:)];    %limit in charge/discharge
+    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}.*(1-zSTOR(i,:))];    %limit in charge/discharge
     Constr=[Constr STORAGEcharge(i,1)==STORstart(i)];    %energy content initial condition
     Constr=[Constr STORAGEcharge(i,2:end)==STORAGEcharge(i,1:(end-1)).*(1-Storages{i,7}.*timestep(1:end-1)')-(STORAGEpout(i,1:(end-1))-STORAGEpin(i,1:(end-1))).*timestep(1:end-1)']; %energy content evolution in time
     % Energy(k+1)=Energy(k)[kWh]-Power(k)[kW]*?t[h] <--- assicurati che
     % unità di misura siano coerenti!!!
-    if symtype~=3
-        Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end)==STORstart(i)]; %cyclic storage charge condition  
-    end
+    if i==3 %ONLYFORRICH
+        for j=1:ngroups+1   %ONLYFORRICH
+            Constr=[Constr sum(STORAGEpin(i,1+(j-1)*24:min(j*24,ntimes)))==sum(D{2}(2,1+(j-1)*24:min(j*24,ntimes)))]; %Good 2 is dispatchable   %ONLYFORRICH
+        end %ONLYFORRICH
+    end %ONLYFORRICH
+    Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end) == FinStorCharge(i)]; %final storage valorization
+    if i~=3 %ONLYFORRICH
     Constr=[Constr Storages{i,9}./100<=STORAGEcharge(i,:)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints
+    Constr=[Constr Storages{i,9}./100<=FinStorCharge(i)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints Final charge
+    end %ONLYFORRICH
 end
 
 
@@ -291,7 +303,8 @@ end
 netprod=sdpvar(Noutputs,ntimes,'full');     %Net units production for each Output (already includes internal consumption of each Output)
 
 Diss=sdpvar(Noutputs,ntimes,'full');                                %NB: CURRENTLY NO UPPER LIMIT SET ON DISSIPATION!!!
-Constr=[Constr Diss>=0];
+Constr=[Constr Diss==0];
+
 
 for i=1:Noutputs
     nprod=0;
@@ -365,7 +378,11 @@ for j=1:Noutputs
         Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + NETWORKbought(netind,:) - NETWORKsold(netind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
     elseif store(j)==1&&net(j)==0
         [~,~,storeind]=intersect(Outputs(j),Storages(:,1));
-        Constr=[Constr [netprod(j,:) + + STORAGEpower(storeind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
+        if j~=2  %ONLYFORRICH
+            Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]]; %ONLYFORRICH
+        else %ONLYFORRICH
+            Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + slacks(j,:) == 0+Diss(j,:)]]; %ONLYFORRICH            
+        end %ONLYFORRICH
     elseif store(j)==0&&net(j)==1
         [~,~,netind]=intersect(Outputs(j),Networks(:,1));
         Constr=[Constr [netprod(j,:) + NETWORKbought(netind,:) - NETWORKsold(netind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
@@ -417,13 +434,15 @@ end
 %%%%%%%%%%%%%%%%%%%%%%
 %[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
 if Nnetworks~=0
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty));
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-sum(FinStorCharge'.*[0.00005;0.00005;0]);
 else
     %TO BE ALIGNED WITH VARIABLE TIME MESH CONCEPT
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks);
     %With dissipation penalty
 %     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks)+sum(Diss*Disspenalty);
 end
+
+Constr=[Constr Objective>=-1e10];
 
 coefcontainer=[coeffs{:}];
 Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:}};
@@ -435,9 +454,9 @@ elseif symtype==3
 end
 
 
-Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod};
+Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod FinStorCharge};
 
-ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
+ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'gurobi.MIPGapAbs',1e-1,'verbose',3);
 
 Model=optimizer(Constr,Objective,ops,Param,Outs);
 
