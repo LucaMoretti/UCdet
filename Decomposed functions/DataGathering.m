@@ -230,6 +230,11 @@ for i=1:Noutputs
     Pmat{i,6}=zeros(1,ntimestot);
     Pmat{i,7}=zeros(1,ntimestot);
     Pmat{i,8}=zeros(1,ntimestot);
+%     Pmat{i,4}=[];
+%     Pmat{i,5}=[];
+%     Pmat{i,6}=[];
+%     Pmat{i,7}=[];
+%     Pmat{i,8}=[];
     
     if Nstorages~=0&&ismember(Outputs{i},{Storages{:,1}}) %strcmp({Storages{:,1}},Outputs{i}))>0 
         nstor=ismember({Storages{:,1}},Outputs{i});

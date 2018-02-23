@@ -268,6 +268,9 @@ FinStorCharge = sdpvar(1,Nstorages);
 %ONLYFORRICH
 ngroups=floor(ntimes/24);
 
+lthind=find(cellfun(@(x) isequal(x,'LTH'),Storages(:,1))); %ONLYFORRICH
+lthindgoods=find(cellfun(@(x) isequal(x,'LTH'),D{1})); %ONLYFORRICH
+
 
 for i=1:Nstorages
     Constr=[Constr STORAGEpower(i,:)==STORAGEpout(i,:)*Storages{i,6}-STORAGEpin(i,:)/Storages{i,4}];
@@ -277,13 +280,13 @@ for i=1:Nstorages
     Constr=[Constr STORAGEcharge(i,2:end)==STORAGEcharge(i,1:(end-1)).*(1-Storages{i,7}.*timestep(1:end-1)')-(STORAGEpout(i,1:(end-1))-STORAGEpin(i,1:(end-1))).*timestep(1:end-1)']; %energy content evolution in time
     % Energy(k+1)=Energy(k)[kWh]-Power(k)[kW]*?t[h] <--- assicurati che
     % unità di misura siano coerenti!!!
-    if i==3 %ONLYFORRICH
+    if i==lthind %ONLYFORRICH
         for j=1:ngroups+1   %ONLYFORRICH
             Constr=[Constr sum(STORAGEpin(i,1+(j-1)*24:min(j*24,ntimes)))==sum(D{2}(2,1+(j-1)*24:min(j*24,ntimes)))]; %Good 2 is dispatchable   %ONLYFORRICH
         end %ONLYFORRICH
     end %ONLYFORRICH
     Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end) == FinStorCharge(i)]; %final storage valorization
-    if i~=3 %ONLYFORRICH
+    if i~=lthind %ONLYFORRICH
     Constr=[Constr Storages{i,9}./100<=STORAGEcharge(i,:)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints
     Constr=[Constr Storages{i,9}./100<=FinStorCharge(i)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints Final charge
     end %ONLYFORRICH
@@ -396,7 +399,7 @@ for j=1:Noutputs
         Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + NETWORKbought(netind,:) - NETWORKsold(netind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
     elseif store(j)==1&&net(j)==0
         [~,~,storeind]=intersect(Outputs(j),Storages(:,1));
-        if j~=2  %ONLYFORRICH
+        if j~=lthindgoods  %ONLYFORRICH
             Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]]; %ONLYFORRICH
         else %ONLYFORRICH
             Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + slacks(j,:) == 0+Diss(j,:)]]; %ONLYFORRICH            
@@ -452,7 +455,8 @@ end
 %%%%%%%%%%%%%%%%%%%%%%
 %[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
 if Nnetworks~=0
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-sum(FinStorCharge'.*[0.00005;0.00005;0]);
+%     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep'.*(1+0.00005*[1:ntimes]),[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-FinStorCharge*[0.00005;0]; %sum(sum((STORAGEpin-STORAGEpout).*repmat(timestep',Nstorages,1).*[zeros(1,ntimes);1+0.005.^[1:ntimes]]*0.00005))
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-FinStorCharge*[0.00005;0]; 
 else
     %TO BE ALIGNED WITH VARIABLE TIME MESH CONCEPT
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks);
