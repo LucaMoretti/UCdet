@@ -1,6 +1,6 @@
 %% MAIN ROUTINE
 clc
-read=0;
+read=1;
 
 %%Convexity check on/off 
 global convcheck            %toppa per evitare casini. In realtà converrebbe eliminare i NaN dai coefficienti calcolati, ma si rischia di perdere informazione sul fatto che c'è qualche problema con le slopes, nel caso in cui si sia effettivamente interessati.
@@ -28,7 +28,7 @@ varstep=false;
 symtype = 2;
 
 %DATA FOR SYMTYPE #2
-nbatches = 365;
+nbatches = 365*2;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 48;

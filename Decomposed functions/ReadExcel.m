@@ -8,7 +8,7 @@ global convcheck
 
 excelpath=fileparts(pwd());
 
-Filename='Input - V_PVT.xlsm';
+Filename='BaseCase.xlsm';
 Filepath=strcat(excelpath,'\',Filename);
 
 [~,range]=xlsread(Filepath,'Demand','datarange');
@@ -155,10 +155,10 @@ for i=1:Nmachines
             F=cellfun(@(x) scatteredInterpolant(t,squeeze(x),'linear','none'),x,'UniformOutput',false);
             Machines{i,8}=cell2mat(cellfun(@(x) permute(x(ambprof),[2 3 1]),F,'UniformOutput',false));
             tempvar=Machines{i,8}(:,1,:);
-            tempvar(isnan(tempvar))=1000;
+            tempvar(isnan(tempvar))=0;
             Machines{i,8}(:,1,:)=tempvar;
             tempvar=Machines{i,8}(:,2:end,:);
-            tempvar(isnan(tempvar))=-100000;
+            tempvar(isnan(tempvar))=0;
             Machines{i,8}(:,2:end,:)=tempvar;
             [x1 x2 x3] = size(Machines{i,8});
             Machines{i,8}=squeeze(mat2cell(Machines{i,8}, x1, x2, ones(1,x3)));
