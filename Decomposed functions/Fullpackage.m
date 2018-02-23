@@ -1,6 +1,6 @@
 %% MAIN ROUTINE
 clc
-read=0;
+read=1;
 
 %%Convexity check on/off 
 global convcheck            %toppa per evitare casini. In realtà converrebbe eliminare i NaN dai coefficienti calcolati, ma si rischia di perdere informazione sul fatto che c'è qualche problema con le slopes, nel caso in cui si sia effettivamente interessati.
@@ -28,7 +28,7 @@ varstep=false;
 symtype = 2;
 
 %DATA FOR SYMTYPE #2
-nbatches = 365;
+nbatches = 7;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 48;
@@ -65,6 +65,7 @@ if symtype==1 || (symtype==3&&roltsteps>=ntimestot)
     timestep=ones(ntimes,1)*basetimestep;
     %Creation of problem structure
     Optimization
+    
     %Implementation of parameters values for current simulation instance
     D=Dall;
     Fuels=Fuelsall;
@@ -138,8 +139,8 @@ elseif symtype==2
         end
         Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),Networksall(:,4:5),'UniformOutput',false);
         actualcoeffs=cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),{Machines{:,8}},'UniformOutput',false);
-        actualslope=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),slope(:),'UniformOutput',false);
-        actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(:),'UniformOutput',false);
+        actualslope=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),slope(convcheck&&convflag),'UniformOutput',false);
+        actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(convcheck&&convflag),'UniformOutput',false);
         actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
         Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
@@ -188,8 +189,8 @@ elseif symtype==2
     end
     Networks(:,4:5) = cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),Networksall(:,4:5),'UniformOutput',false);
     actualcoeffs=cellfun(@(x) x(tstart:(tstart+tdur(runcount)-1)),{Machines{:,8}},'UniformOutput',false);
-    actualslope=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),slope(:),'UniformOutput',false);
-    actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(:),'UniformOutput',false);
+    actualslope=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),slope(convcheck&&convflag),'UniformOutput',false);
+    actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(convcheck&&convflag),'UniformOutput',false);
     actualcoeffs=[actualcoeffs{:}];
     %Creation of parameters input vector
     Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};

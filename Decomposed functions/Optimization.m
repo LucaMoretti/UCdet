@@ -13,6 +13,9 @@ Disspenalty=0;
 %Binary variables for machines
 Z=binvar(Nmachines,ntimes,'full');
 indicator=sdpvar(Nmachines,ntimes+histdepth-1);
+slopev=cell(Nmachines,1);
+interceptv=cell(Nmachines,1);
+
 %On/Off hystory
 OnOffHist=binvar(Nmachines,histdepth,'full');
 
@@ -75,7 +78,7 @@ zNET=binvar(Nnetworks,ntimes,'full');
 slacks=sdpvar(size(D{2},1),ntimes,'full');                       
 slackcost=ones(1,size(D{2},1))*1e7;
 Constr = slacks >= 0;
-
+sunprod=zeros(1,ntimes);
 
 %%%%%%%%%%%%%%%%%%%%%%%%
 % MACHINES CONSTRAINTS %
@@ -84,62 +87,73 @@ Constr = slacks >= 0;
 %Machines characteristic curves
 for i=1:Nmachines
     INPUT{i}=sdpvar(numel(Machines{i,2}),ntimes,'full');           %Input variables for each machine
-    OUTPUT{i}=sdpvar(numel(Machines{i,3}),ntimes,'full');           %Output variables for each machine
+    OUTPUT{i}=sdpvar(numel(Machines{i,3}),ntimes,'full');           %Output variables for each machine    
     coeffs{i}=cell(ntimes,1);
-    slopev{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full');
-    interceptv{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full'); 
+    
     for j=1:ntimes
         coeffs{i}{j} = sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3}),'full'); %coefficients of operating points, variables since they will depend on T
     end
     
+    %On-Off Machines
+    if J(i) == 1
+        temprl=reshape([coeffs{i}{:}],size(coeffs{i}{1},2),size(coeffs{i},1))';
+        sunprod=sunprod+sum(temprl,2)';
+        for j=1:numel(Machines{i,2})
+            Constr=[Constr INPUT{i}(j,:) == (temprl(:,j)').*Z(i,:)];
+        end
+        for j=numel(Machines{i,2})+1:numel(Machines{i,2})+numel(Machines{i,3})
+            Constr=[Constr OUTPUT{i}(j-numel(Machines{i,2}),:) == (temprl(:,j)').*Z(i,:)];
+        end
+    else
 
-    
-    if convexflag(i)&&convcheck==true     %characteristic function IS CONVEX in all outputs
-        %convexflag{i}=true;
-        %only if the convexcheck has been passed (I need to make references
-        %to variable coefficients, so I can't make the check here)
-        for k=1:numel(Machines{i,3})
-            for f=1:(J(i)-1)
-                Constr=[Constr INPUT{i}(:)'>=OUTPUT{i}(k,:).*permute(slopev{i}(f,k,:),[1,3,2])+permute(interceptv{i}(f,k,:),[1,3,2]).*Z(i,:)];
-                Constr=[Constr (OUTPUT{i}>=0):'Output Positivity'];
+        
+        if convexflag(i)&&convcheck     %characteristic function IS CONVEX in all outputs
+            slopev{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full');
+            interceptv{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full'); 
+            %convexflag{i}=true;
+            %only if the convexcheck has been passed (I need to make references
+            %to variable coefficients, so I can't make the check here)
+            for k=1:numel(Machines{i,3})
+                for f=1:(J(i)-1)
+                    Constr=[Constr INPUT{i}(:)'>=OUTPUT{i}(k,:).*permute(slopev{i}(f,k,:),[1,3,2])+permute(interceptv{i}(f,k,:),[1,3,2]).*Z(i,:)];
+                    Constr=[Constr (OUTPUT{i}>=0):'Output Positivity'];
+                end
+            end
+
+        else   %characteristic function IS NOT CONVEX in all outputs 
+
+            alfas{i}=sdpvar(J(i),ntimes,'full');           %alfa variables for each machine and each timestep
+            Constr=[Constr (0<=alfas{i}<=1):'Alfas limitation'];                             %alfa values always in between 0 and 1
+            Constr=[Constr (sum(alfas{i},1)==Z(i,:)):'Alfas only if machine on'];          %sum of alfas in one timestep equal to one if machine on
+            betas{i}=binvar(J(i)-1,ntimes);          %beta variables for each machine and each timestep
+            Constr=[Constr sum(betas{i},1)== 1];                       %only one segment active in each timestep
+            for j=2:(J(i)-1)
+            Constr=[Constr alfas{i}(j,:)<=betas{i}(j-1,:)+betas{i}(j,:)];        %only alfas which are edge of selected beta segment are greater than zero
+            end
+            Constr=[Constr alfas{i}(1,:)<=betas{i}(1,:)];                       %first alfa constraint
+            Constr=[Constr alfas{i}(J(i),:)<=betas{i}((J(i)-1),:)];             %last alfa constraint
+
+            %Relation between alfas, betas and input/output(s)
+                colP=1;     %starting column for reading sampled points matrix
+
+            for j=1:numel(Machines{i,2})
+                temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
+                temp=[temp{:}];
+                Constr=[Constr INPUT{i}(j,:) == sum(temp.*alfas{i},1)];
+                %Constr=[Constr (INPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h))];
+                colP=colP+1;
+            end
+            for j=1:numel(Machines{i,3})
+                temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
+                temp=[temp{:}];                
+                Constr=[Constr OUTPUT{i}(j,:) == sum(temp.*alfas{i},1)];
+                %Constr=[Constr OUTPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)];
+                colP=colP+1;
             end
         end
-        
-    else   %characteristic function IS NOT CONVEX in all outputs 
-            
-        alfas{i}=sdpvar(J(i),ntimes,'full');           %alfa variables for each machine and each timestep
-        Constr=[Constr (0<=alfas{i}<=1):'Alfas limitation'];                             %alfa values always in between 0 and 1
-        Constr=[Constr (sum(alfas{i},1)==Z(i,:)):'Alfas only if machine on'];          %sum of alfas in one timestep equal to one if machine on
-        betas{i}=binvar(J(i)-1,ntimes);          %beta variables for each machine and each timestep
-        Constr=[Constr sum(betas{i},1)== 1];                       %only one segment active in each timestep
-        for j=2:(J(i)-1)
-        Constr=[Constr alfas{i}(j,:)<=betas{i}(j-1,:)+betas{i}(j,:)];        %only alfas which are edge of selected beta segment are greater than zero
-        end
-        Constr=[Constr alfas{i}(1,:)<=betas{i}(1,:)];                       %first alfa constraint
-        Constr=[Constr alfas{i}(J(i),:)<=betas{i}((J(i)-1),:)];             %last alfa constraint
-
-        %Relation between alfas, betas and input/output(s)
-            colP=1;     %starting column for reading sampled points matrix
-
-        for j=1:numel(Machines{i,2})
-            temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
-            temp=[temp{:}];
-            Constr=[Constr INPUT{i}(j,:) == sum(temp.*alfas{i},1)];
-            %Constr=[Constr (INPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h))];
-            colP=colP+1;
-        end
-        for j=1:numel(Machines{i,3})
-            temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
-            temp=[temp{:}];                
-            Constr=[Constr OUTPUT{i}(j,:) == sum(temp.*alfas{i},1)];
-            %Constr=[Constr OUTPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)];
-            colP=colP+1;
-        end
- 
     end
 
 end
-
 
 
 %Operation limits, ramp limits(1) and on/off variables
@@ -166,11 +180,15 @@ for i=1:Nmachines
     %Vincolo in discesa 
     Constr=[Constr OUTPUT{i}(1,1:(end-1)) - OUTPUT{i}(1,2:end) <= Machines{i,6}(1)*timestep(1:end-1)' + (1-Z(i,2:end))*Mbig]; %again, ramp limit on main machine output
     Constr=[Constr LastProd(i) - OUTPUT{i}(1,1) <= Machines{i,6}(1)*timestep + (1-Z(i,1))*Mbig]; %Initial ramping constraint
+%     for h=1:ntimes
+%             Constr=[Constr Z(i,h) <= sum(sum(coeffs{i}{h}))];
+%     end
     %Vincolo in discesa con spegnimento macchina a minimo carico (da
     %completare)
 %     Constr=[Constr OUTPUT{i}(1,1:(end-1)) - OUTPUT{i}(1,2:end) <= Machines{i,6}(1)*timestep.*Z(i,2:end) + (Z(i,1:(end-1))-Z(i,2:end)).*(OUTPUT{i}(1,1:(end-1))]; 
 
 end
+
 
 
 
@@ -184,10 +202,10 @@ for i=1:exclusivegroups
         end
     end
 end
-            
+
 for i=1:exclusivegroups
-%     Constr=[Constr sum(Z(logicflags(:,i),:))<=1];
-    Constr=[Constr sum(Z(logicflags(:,i),:))==1];  %ONLIFORRICH
+    Constr=[Constr sum(Z(logicflags(:,i),:))<=1];
+%     Constr=[Constr sum(Z(logicflags(:,i),:))*1e9>=sunprod];  %ONLIFORRICH
 end
 
 
@@ -445,7 +463,9 @@ end
 Constr=[Constr Objective>=-1e10];
 
 coefcontainer=[coeffs{:}];
-Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:}};
+% Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{~cellfun(@isempty, slopev)} interceptv{~cellfun(@isempty, interceptv)}};
+Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:}};
+
 % Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
 if symtype==2||symtype==1
     advance=ntimes+1;
@@ -456,7 +476,7 @@ end
 
 Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod FinStorCharge};
 
-ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'gurobi.MIPGapAbs',1e-1,'verbose',3);
+ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'gurobi.MIPGapAbs',1e-1,'gurobi.TimeLimit',300,'verbose',3);
 
 Model=optimizer(Constr,Objective,ops,Param,Outs);
 
