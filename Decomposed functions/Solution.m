@@ -28,6 +28,7 @@ if symtype==1||symtype==2
     en=en+1;
     startflags=sol{en};
     STORstart=sol{en+2}';
+    MachBins=sol{en+3};
 elseif  symtype==3
     st=1;
     en=Nmachines;
