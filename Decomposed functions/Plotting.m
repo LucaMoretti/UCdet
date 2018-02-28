@@ -125,6 +125,7 @@ end
 legend(gca,names)
 set(gcf, 'Position', get(0,'Screensize')); % Maximize figure.
 hold off
+ax{i}=gca;
 end
 
 fig=i;
@@ -176,6 +177,7 @@ plot(get(gca,'xlim'), [Storages{nst,2}*Storages{nst,9}/100 Storages{nst,2}*Stora
 plot(get(gca,'xlim'), [Storages{nst,2}*Storages{nst,8}/100 Storages{nst,2}*Storages{nst,8}/100],'--k','Linewidth',2)
 % linkaxes([h k p],'y')
 set(gcf, 'Position', get(0,'Screensize')); % Maximize figure.
+ax{fig}=gca;
 hold off
 end
 end
@@ -209,4 +211,6 @@ plot(Obj,'k','LineWidth',2)
 tags{end+1}='Overall cost function';
 legend(gca,[tags{:}])
 set(gcf, 'Position', get(0,'Screensize')); % Maximize figure.
+ax{end+1}=gca;
+linkaxes([ax{:}],'x')
 hold off

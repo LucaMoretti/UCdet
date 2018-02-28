@@ -1,6 +1,6 @@
 %% MAIN ROUTINE
 clc
-read=true;
+read=1;
 
 tic
 
