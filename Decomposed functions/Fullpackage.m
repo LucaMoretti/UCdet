@@ -123,6 +123,7 @@ elseif symtype==2
     else
         STORstart=0;
     end
+    V0=[100;50;100];
     
     for runcount=1:(nbatches-1)
         
@@ -143,7 +144,7 @@ elseif symtype==2
         actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(convcheck&&convflag),'UniformOutput',false);
         actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
-        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
+        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:} V0};
         %Problem solution and data gathering
         Solution
         DataGathering        
@@ -193,7 +194,7 @@ elseif symtype==2
     actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(convcheck&&convflag),'UniformOutput',false);
     actualcoeffs=[actualcoeffs{:}];
     %Creation of parameters input vector
-    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
+    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:} V0};
     %Problem solution and data gathering
     Solution
     DataGathering        

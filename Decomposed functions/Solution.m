@@ -29,6 +29,8 @@ if symtype==1||symtype==2
     startflags=sol{en};
     STORstart=sol{en+2}';
     MachBins=sol{en+3};
+    V=sol{en+4};
+    V0=V(:,end);
 elseif  symtype==3
     st=1;
     en=Nmachines;
