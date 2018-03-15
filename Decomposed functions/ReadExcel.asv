@@ -8,7 +8,7 @@
 
 excelpath=fileparts(pwd());
 
-Filename='Nuova Caledonia.xlsm';
+Filename='Input_EPS.xlsm';
 Filepath=strcat(excelpath,'\',Filename);
 
 [~,range]=xlsread(Filepath,'Demand','datarange');
@@ -224,8 +224,8 @@ while ~isempty(netname)
     
     [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
     
-%     Networksall{1,4}=zeros(size_vec,1);
-%     Networksall{1,5}=zeros(size_vec,1);
+    Networksall{1,4}=zeros(size_vec,1);
+    Networksall{1,5}=zeros(size_vec,1);
 end    
 
 Nnetworks=i;

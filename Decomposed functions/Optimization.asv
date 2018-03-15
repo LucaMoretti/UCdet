@@ -425,15 +425,12 @@ end
 deltaRENperc=1;
 % deltaDperc=1;
 
-
-
-
-% for i=1:Nmachines
-%     nompower(i)=Machines{i,4}{1,2}{1,1}(end);
-%     PresMach{i}=sdpvar(ismember(Machines{i,3},'EE'),ntimes,'full');
-%     Constr = [Constr PresMach{i} == Z(i,:).*repmat(nompower(i),1,ntimes)];
-% %     Constr = [Constr PresMach{i} <= OUTPUT{i}(ismember(Machines{i,3},'EE'),:) + min(Machines{i,6}(1),nompower(i)-OUTPUT{i}(ismember(Machines{i,3},'EE'),:))];
-% end
+for i=1:Nmachines
+    nompower(i)=Machines{i,4}{1,2}{1,1}(end);
+    PresMach{i}=sdpvar(ismember(Machines{i,3},'EE'),ntimes,'full');
+    Constr = [Constr PresMach{i} == Z(i,:).*repmat(nompower(i),1,ntimes)];
+%     Constr = [Constr PresMach{i} <= OUTPUT{i}(ismember(Machines{i,3},'EE'),:) + min(Machines{i,6}(1),nompower(i)-OUTPUT{i}(ismember(Machines{i,3},'EE'),:))];
+end
 
 
 PresREN=sdpvar(1,ntimes,'full');  %% to be adapted in order to cope with arbitrary number of non dispatchable electricity producers
@@ -458,15 +455,13 @@ NetDres=sdpvar(1,ntimes);
 Constr =[Constr NetDres >= Dres];
 Constr =[Constr NetDres >= sum(PresREN,2)];
 
-BESSsrc=0.6;
-
 %BESS reserve contribution
 PresBESS=sdpvar(1,ntimes,'full');% 
 Constr = [Constr PresBESS <= Storages{:,5}];
 % Constr = [Constr PresBESS <= maxC]; %per ora non considerato
-Constr = [Constr PresBESS <= STORAGEpower + BESSsrc*Storages{:,5}];
+Constr = [Constr STORAGEpower + *Storages{:,5}]
 
-% Constr = [Constr PresBESS{i} <= (STORAGEcharge - repmat([Storages{:,2}]'.*[Storages{:,9}]'./100,1,ntimes)).*repmat(cell2mat(Storages(:,6)),1,ntimes)./timestep'-STORAGEpower(i,:)]; %(repmat(timestep',2,1))
+Constr = [Constr PresBESS{i} <= (STORAGEcharge - repmat([Storages{:,2}]'.*[Storages{:,9}]'./100,1,ntimes)).*repmat(cell2mat(Storages(:,6)),1,ntimes)./timestep'-STORAGEpower(i,:)]; %(repmat(timestep',2,1))
 
 % %Inverter equivalent contribution
 % PresInv=sdpvar(2,ntimes);
@@ -474,8 +469,8 @@ Constr = [Constr PresBESS <= STORAGEpower + BESSsrc*Storages{:,5}];
 % Constr = [Constr PresInv <= repmat([125*0.97;125*0.97],1,ntimes)];          %FIXED INVERTER SIZES
 
 %Actual reserve contraint 
-% Constr = [Constr cellfun(@(x) sum(x(:)),[PresMach,PresBESS,PresREN]) >= Dres];
-Constr = [Constr NetDres <= PresBESS + sum(Z,2).*1250];
+Constr = [Constr cellfun(@(x) sum(x(:)),[PresMach,PresBESS,PresREN]) >= Dres];
+
 
 
 if suppresswarning==1

@@ -1,6 +1,6 @@
 %% MAIN ROUTINE
 clc
-read=false;
+read=0;
 
 tic
 
@@ -21,10 +21,10 @@ varstep=true;
 % 2 --> contiguous batches
 % 3 --> rolling horizon
 
-symtype = 3;
+symtype = 2;
 
 %DATA FOR SYMTYPE #2
-nbatches = 6;
+nbatches = 7;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 24*60;
