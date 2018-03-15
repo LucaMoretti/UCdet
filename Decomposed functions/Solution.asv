@@ -1,36 +1,41 @@
 %% PROBLEM SOLUTION AND VARIABLES VALUE EXTRACTION
 
 sol=Model{Param};
-
+if sum(sol{end})==0
+    cane=1
+end
 if symtype==1||symtype==2
-    st=1;
-    en=Nmachines;
-    INPUT=sol(st:en);
-    st=Nmachines+1;
-    en=2*Nmachines;
-    OUTPUT=sol(st:en);
-    en=en+1;
-    STORAGEcharge=sol{en};
-    en=en+1;
-    STORAGEpower=sol{en};
-    en=en+1;
-    NETWORKbought=sol{en};
-    en=en+1;
-    NETWORKsold=sol{en};
-    en=en+1;
-    Diss=sol{en};
-    en=en+1;
-    slacks=sol{en};
-    en=en+1;
-    OnOffHist=sol{en};
-    en=en+1;
-    fuelusage=sol{en};
-    en=en+1;
-    startflags=sol{en};
-    STORstart=sol{en+2}';
-    MachBins=sol{en+3};
-    V=sol{en+4};
-    V0=V(:,end);
+        st=1;
+        en=Nmachines;
+        INPUT=sol(st:en);
+        st=Nmachines+1;
+        en=2*Nmachines;
+        OUTPUT=sol(st:en);
+        en=en+1;
+        STORAGEcharge=sol{en};
+        en=en+1;
+        STORAGEpower=sol{en};
+        en=en+1;
+        NETWORKbought=sol{en};
+        en=en+1;
+        NETWORKsold=sol{en};
+        en=en+1;
+        Diss=sol{en};
+        en=en+1;
+        slacks=sol{en};
+        en=en+1;
+        OnOffHist=sol{en};
+        en=en+1;
+        fuelusage=sol{en};
+        en=en+1;
+        startflags=sol{en};
+        MachBins=sol{en+3};
+        if sum(sum(sol{en+4}))~=0           %otherwise no feasible solution found
+        STORstart=sol{en+2}';
+        V=sol{en+4};
+        V0=V(:,end);
+        end
+    end
 elseif  symtype==3
     st=1;
     en=Nmachines;

@@ -15,28 +15,32 @@ Filepath=strcat(excelpath,'\',Filename);
 ExcelApp = actxserver('Excel.Application');
 ExcelApp.Visible = 0;
 ExcelApp.Workbooks.Open(fullfile(Filepath));
-% Workbook = ExcelApp.ActiveWorkbook;
-% Worksheets = Workbook.sheets;
+Workbook = ExcelApp.ActiveWorkbook;
+Worksheets = Workbook.sheets;
 
 
 % Open file located in the current folder.
 Nmachines=ExcelApp.Run('machinesref');  %Total number of machines
 
 %READING DEMAND PROFILES
-% Worksheets.Item('Demand').Activate;
-% Dtemp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','datarange'));
-% Dtemp = Dtemp.value;
-% Dall = {Dtemp(1,:)',cell2mat(Dtemp(2:end,:))'};
-[~,range]=xlsread(Filepath,'Demand','datarange');
-[Dall,Dnames]=xlsread(Filepath,'Demand',range{1});
+Worksheets.Item('Demand').Activate;
+temp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','datarange'));
+temp = temp.value;
+Dall = {temp(1,:)',cell2mat(temp(2:end,:))'};
+% [~,range]=xlsread(Filepath,'Demand','datarange');
+% [Dall,Dnames]=xlsread(Filepath,'Demand',range{1});
 
 %READING UNDISPATCHABLE PRODUCTION PROFILES
-% Worksheets.Item('Undispatch').Activate;
-% range=get(ExcelApp.ActiveSheet,'Range','ddatarange');
-[~,range]=xlsread(Filepath,'Undispatch','ddatarange');
-if ~isempty(range) 
+Worksheets.Item('Undispatch').Activate;
+range=get(ExcelApp.ActiveSheet,'Range','ddatarange');
+% [~,range]=xlsread(Filepath,'Undispatch','ddatarange');
+if range.value~=0
+    temp=get(ExcelApp.ActiveSheet,'Range',range);
+    temp=temp.value;
+    Undisp=temp(3:end,:);
+    Undispnames=temp(1:2,:);
     
-    [Undisp,Undispnames]=xlsread(Filepath,'Undispatch',range{1});
+%     [Undisp,Undispnames]=xlsread(Filepath,'Undispatch',range{1});
     x=find(~cellfun(@isempty,Undispnames(1,:)));
     Nundisp=length(x);
     x(end+1)=length(Undispnames(2,:))+1;
@@ -44,54 +48,71 @@ else
     Nundisp=0;
     UndProdall=cell(1,1);
 end
-[~,range]=xlsread(Filepath,'Prices','pricerange');
-[Prices,Pricetags]=xlsread(Filepath,'Prices',range{1});
 
 for i=1:Nundisp
     UndProdall{i,1}=Undispnames(1,x(i));
     UndProdall{i,2}=Undispnames(2,x(i):(x(i+1)-1));
     UndProdall{i,3}=Undisp(:,x(i):(x(i+1)-1))';
 end
+
+
+%READING PRICES PROFILES
+Worksheets.Item('Prices').Activate;
+temp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','pricerange'));
+temp=temp.value;
+Prices=cell2mat(temp(4:end,:));
+Pricetags=temp(1:3,:);
+Pricetags(cell2mat(cellfun(@(x) ~ischar(x),Pricetags,'Uniformoutput',0)))={''};
+
+% [~,range]=xlsread(Filepath,''s','pricerange');
+% [Prices,Pricetags]=xlsread(Filepath,'Prices',range{1});
+
     
 %Simulation horizon and timestep settings
-basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
-ntimestot=size(Dall,1);                               % total number of timesteps
+Worksheets.Item('Demand').Activate;
+basetimestep=get(ExcelApp.ActiveSheet,'Range','tdur');
+basetimestep=basetimestep.value;
+% basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
+ntimestot=size(Dall{2},2);                               % total number of timesteps
 days=ntimestot*basetimestep/24;                        % simulation days
 
 %Temperature Profiles %THIS WILL BECOME GENERAL NON-CONTROLLABLE DEGREES OF
 %FREEDOM
-ndof=xlsread(Filepath,'Demand','ambdof');
-
-%[Tprof,~]=xlsread(Filepath,'Demand',strcat('D5:D',num2str(ntimestot+4)));
-
-%reading additional ambient variables
-%if ndof>1
-   [~,range]=xlsread(Filepath,'Demand','ambrange');
-   [ambvar,ambnames]=xlsread(Filepath,'Demand',range{1});
-   %killing measure unit (if present)
-   ambnames=cellfun(@(x) strtok(x),ambnames,'uniformoutput',false);
-%end
+ndof=get(ExcelApp.ActiveSheet,'Range','ambdof');
+ndof=ndof.value;
+% ndof=xlsread(Filepath,'Demand','ambdof');
 
 
+%READING AMBIENT VARIABLES
+temp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','ambrange'));
+temp=temp.value;
+ambvar=cell2mat(temp(2:end,:));
+ambnames=temp(1,:);
+% [~,range]=xlsread(Filepath,'Demand','ambrange');
+% [ambvar,ambnames]=xlsread(Filepath,'Demand',range{1});
+
+%killing measure unit (if present)
+ambnames=cellfun(@(x) strtok(x),ambnames,'uniformoutput',false);
 
 
-ExcelApp.Workbooks.Item(Filename).Save 
-ExcelApp.Quit;
-ExcelApp.release;
  
 
-%Demand for each good: row=good ; columns=timestep
-Dall={{Dnames{:}}' Dall'}; 
+% %Demand for each good: row=good ; columns=timestep
+% Dall={{Dnames{:}}' Dall'}; 
 
 Nmachines=double(Nmachines);
-[~,range]=xlsread(Filepath,'DATA','rangeread');
-[~,refranges]=xlsread(Filepath,'DATA',range{1});
+
+Worksheets.Item('DATA').Activate;
+refranges=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','rangeread'));
+refranges=refranges.value;
+% [~,range]=xlsread(Filepath,'DATA','rangeread');
+% [~,refranges]=xlsread(Filepath,'DATA',range{1});
 
 %INPUT DATA: 
-%column1 --> machine name; 
-%column2 --> input type; 
-%column3 --> output/s type/s; 
-%column4 --> sampled operating points; 
+%column1 --> machine name;
+%column2 --> input type;
+%column3 --> output/s type/s;
+%column4 --> sampled operating points;
 %column5 --> operation limits (on first output)
 %column6 --> ramp limits (on first output)
 %column7 --> SU/SD times, penalty and min up times                          NB: SU time substituted with exclusive on flag (column 1 of group 7)
@@ -99,20 +120,30 @@ Nmachines=double(Nmachines);
 %column9 --> Ambient parameters
 
 %Each row corresponds to a different machine
+Worksheets.Item('Machines').Activate;
 for i=1:Nmachines
     for j=1:3
-    [~, Machines{i,j}]=xlsread(Filepath,'Machines',refranges{i,j});
+        temp=get(ExcelApp.ActiveSheet,'Range',refranges{i,j});
+        if ischar(temp.value)
+            Machines{i,j}={temp.value};
+        else
+            Machines{i,j}=temp.value;
+        end
+%     [~, Machines{i,j}]=xlsread(Filepath,'Machines',refranges{i,j});
     end
     %ambient tags 
     if refranges{i,8} ~= "N/A"
-        [~, Machines{i,9}]=xlsread(Filepath,'Machines',refranges{i,8});
+        temp=get(ExcelApp.ActiveSheet,'Range',refranges{i,8});
+        Machines{i,9}=(temp.value);
+%         [~, Machines{i,9}]=xlsread(Filepath,'Machines',refranges{i,8});
     end
     for j=4:7
-    Machines{i,j}=xlsread(Filepath,'Machines',refranges{i,j});
+        temp=get(ExcelApp.ActiveSheet,'Range',refranges{i,j});
+        Machines{i,j}=cell2mat(temp.value);
+%     Machines{i,j}=xlsread(Filepath,'Machines',refranges{i,j});
     end
     flagsvector(i)=Machines{i,7}(1);
 end
-
 
 
 exclusivetags=unique(flagsvector(flagsvector~=0));
@@ -244,18 +275,24 @@ end
 %sarebbe bello avere reference variabile su inizio nomi storage ma vabbè
 i=0;
 Storages={[]};
-[~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(3+i)));
-while ~isempty(storname)
+Worksheets.Item('Stor&Net').Activate;
+storname=get(ExcelApp.ActiveSheet,'Range',strcat('A',num2str(3+i)));
+storname=storname.value;
+% [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(3+i)));
+while ~isnan(storname)
     i=i+1;
-    Storages(i,1)=storname;
-    storvals=xlsread(Filepath,'Stor&Net',strcat('B',num2str(2+i),':J',num2str(2+i)));
+    Storages(i,1)={storname};
+    temp=get(ExcelApp.ActiveSheet,'Range',strcat('B',num2str(2+i),':J',num2str(2+i)));
+    storvals=cell2mat(temp.value);
+%     storvals=xlsread(Filepath,'Stor&Net',strcat('B',num2str(2+i),':J',num2str(2+i)));
     for j=2:10
         Storages{i,j}=storvals(j-1);
     end
-    [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(3+i)));
+    storname=get(ExcelApp.ActiveSheet,'Range',strcat('A',num2str(3+i)));
+    storname=storname.value;
+%     [~,storname]=xlsread(Filepath,'Stor&Net',strcat('A',num2str(3+i)));
 end    
 
- 
 Nstorages=i;
 
 Networksall={[] [] [] 0 0};
@@ -264,21 +301,29 @@ Networksall={[] [] [] 0 0};
 %column2 --> max withdrawal rate
 %column3 --> max injection rate
 i=0;
-[k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
-while ~isempty(netname)
+netname=get(ExcelApp.ActiveSheet,'Range',strcat('L',num2str(3+i)));
+netname=netname.value;
+% [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
+while ~isnan(netname)
     i=i+1;
-    Networksall(i,1)=netname;
-    netvals{1}=xlsread(Filepath,'Stor&Net',strcat('M',num2str(2+i),':M',num2str(2+i)));
-    netvals{2}=xlsread(Filepath,'Stor&Net',strcat('N',num2str(2+i),':N',num2str(2+i)));
+    Networksall(i,1)={netname};
+    netvals{1}=get(ExcelApp.ActiveSheet,'Range',strcat('M',num2str(2+i),':M',num2str(2+i)));
+    netvals{1}=netvals{1}.value;
+%     netvals{1}=xlsread(Filepath,'Stor&Net',strcat('M',num2str(2+i),':M',num2str(2+i)));
+    netvals{2}=get(ExcelApp.ActiveSheet,'Range',strcat('N',num2str(2+i),':N',num2str(2+i)));
+    netvals{2}=netvals{2}.value;
+%     netvals{2}=xlsread(Filepath,'Stor&Net',strcat('N',num2str(2+i),':N',num2str(2+i)));
     for j=2:3
-        if ~isempty(netvals{j-1})
+        if ~ischar(netvals{j-1})
             Networksall{i,j}=netvals{j-1};
         else
             Networksall{i,j}=Inf;
         end        
     end
     
-    [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
+    netname=get(ExcelApp.ActiveSheet,'Range',strcat('L',num2str(3+i)));
+    netname=netname.value;
+%     [k,netname]=xlsread(Filepath,'Stor&Net',strcat('L',num2str(3+i)));
 end    
 
 Nnetworks=i;
@@ -315,6 +360,9 @@ for i=1:Nnetworks
 end
 
 
+ExcelApp.Workbooks.Item(Filename).Save 
+ExcelApp.Quit;
+ExcelApp.release;
 
 
 x=find(~cellfun(@isempty,Pricetags(1,:)));  %check whether we have both networks and fuels
@@ -336,5 +384,5 @@ else                                    %only fuel prices
     end
 end   
 Nfuels=size(Fuelsall,1);
-
+% 
 system('taskkill /F /IM EXCEL.EXE');            %alterantives to brutally murder all excel tasks?

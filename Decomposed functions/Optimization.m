@@ -496,7 +496,11 @@ end
 %[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
 if Nnetworks~=0
 %     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep'.*(1+0.00005*[1:ntimes]),[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-FinStorCharge*[0.00005;0]; %sum(sum((STORAGEpin-STORAGEpout).*repmat(timestep',Nstorages,1).*[zeros(1,ntimes);1+0.005.^[1:ntimes]]*0.00005))
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-FinStorCharge*[1;0.00005;0]; 
+    if Nstorages == 3   
+        Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-FinStorCharge*[1;0.00005;0];
+    else
+        Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-FinStorCharge*[0.00005;0]; 
+    end
 else
     %TO BE ALIGNED WITH VARIABLE TIME MESH CONCEPT
     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks);

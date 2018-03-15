@@ -11,7 +11,7 @@ tic
 if read
     clear
     han = waitbar(0.05,'Simulation initialization');
-    ReadExcel
+    ReadExcelbau
 else
     han = waitbar(0.05,'Data already read');
 end
@@ -53,7 +53,7 @@ STORstart=0;
 
 % You might need to act on: ntimes, D, Fuels, Networks, UndProd
 
-waitbar(0.4,han,'Problem formulation')
+waitbar(0.4,han,strcat('Problem formulation',' (',num2str(cases),' cases left)'))
 
                         %%%%%%%%%%%%%%
                         %SINGLE BATCH%
@@ -127,7 +127,11 @@ elseif symtype==2
     
     for runcount=1:(nbatches-1)
         
-        waitbar(0.4+0.5/nbatches*runcount,han,strcat('Solution batch n°',num2str(runcount)))
+%         if runcount == 204
+%             cane = 1;
+%         end
+        
+        waitbar(0.4+0.5/nbatches*runcount,han,strcat('Solution batch n°',num2str(runcount),' (',num2str(cases),' cases left)'))
         
         %Implementation of parameters values for current simulation instance
         D(2) = cellfun(@(x) x(:,tstart:(tstart+tdur(runcount)-1)),Dall(2),'UniformOutput',false);
@@ -474,8 +478,8 @@ end
 
 totalfo=sum(Obj)
 
-waitbar(0.9,han,'Solution plotting')
-Plotting
+% waitbar(0.9,han,'Solution plotting')
+% Plotting
 waitbar(1,han,'Simulation completed!')
 close(han) 
 toc

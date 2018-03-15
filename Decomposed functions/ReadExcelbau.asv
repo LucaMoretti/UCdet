@@ -15,28 +15,32 @@ Filepath=strcat(excelpath,'\',Filename);
 ExcelApp = actxserver('Excel.Application');
 ExcelApp.Visible = 0;
 ExcelApp.Workbooks.Open(fullfile(Filepath));
-% Workbook = ExcelApp.ActiveWorkbook;
-% Worksheets = Workbook.sheets;
+Workbook = ExcelApp.ActiveWorkbook;
+Worksheets = Workbook.sheets;
 
 
 % Open file located in the current folder.
 Nmachines=ExcelApp.Run('machinesref');  %Total number of machines
 
 %READING DEMAND PROFILES
-% Worksheets.Item('Demand').Activate;
-% Dtemp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','datarange'));
-% Dtemp = Dtemp.value;
-% Dall = {Dtemp(1,:)',cell2mat(Dtemp(2:end,:))'};
-[~,range]=xlsread(Filepath,'Demand','datarange');
-[Dall,Dnames]=xlsread(Filepath,'Demand',range{1});
+Worksheets.Item('Demand').Activate;
+temp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','datarange'));
+temp = temp.value;
+Dall = {temp(1,:)',cell2mat(temp(2:end,:))'};
+% [~,range]=xlsread(Filepath,'Demand','datarange');
+% [Dall,Dnames]=xlsread(Filepath,'Demand',range{1});
 
 %READING UNDISPATCHABLE PRODUCTION PROFILES
-% Worksheets.Item('Undispatch').Activate;
-% range=get(ExcelApp.ActiveSheet,'Range','ddatarange');
-[~,range]=xlsread(Filepath,'Undispatch','ddatarange');
-if ~isempty(range) 
+Worksheets.Item('Undispatch').Activate;
+range=get(ExcelApp.ActiveSheet,'Range','ddatarange');
+% [~,range]=xlsread(Filepath,'Undispatch','ddatarange');
+if range.value~=0
+    temp=get(ExcelApp.ActiveSheet,'Range',range);
+    temp=temp.value;
+    Undisp=temp(3:end,:);
+    Undispnames=temp(1:2,:);
     
-    [Undisp,Undispnames]=xlsread(Filepath,'Undispatch',range{1});
+%     [Undisp,Undispnames]=xlsread(Filepath,'Undispatch',range{1});
     x=find(~cellfun(@isempty,Undispnames(1,:)));
     Nundisp=length(x);
     x(end+1)=length(Undispnames(2,:))+1;
@@ -44,48 +48,63 @@ else
     Nundisp=0;
     UndProdall=cell(1,1);
 end
-[~,range]=xlsread(Filepath,'Prices','pricerange');
-[Prices,Pricetags]=xlsread(Filepath,'Prices',range{1});
 
 for i=1:Nundisp
     UndProdall{i,1}=Undispnames(1,x(i));
     UndProdall{i,2}=Undispnames(2,x(i):(x(i+1)-1));
     UndProdall{i,3}=Undisp(:,x(i):(x(i+1)-1))';
 end
+
+
+%READING PRICES PROFILES
+Worksheets.Item('Prices').Activate;
+temp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','pricerange'));
+temp=temp.value;
+Prices=temp(2:end,:);
+Pricetags=temp(1,:);
+
+% [~,range]=xlsread(Filepath,''s','pricerange');
+% [Prices,Pricetags]=xlsread(Filepath,'Prices',range{1});
+
     
 %Simulation horizon and timestep settings
-basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
+Worksheets.Item('Demand').Activate;
+basetimestep=get(ExcelApp.ActiveSheet,'Range','tdur');
+basetimestep=basetimestep.value;
+% basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
 ntimestot=size(Dall,1);                               % total number of timesteps
 days=ntimestot*basetimestep/24;                        % simulation days
 
 %Temperature Profiles %THIS WILL BECOME GENERAL NON-CONTROLLABLE DEGREES OF
 %FREEDOM
-ndof=xlsread(Filepath,'Demand','ambdof');
-
-%[Tprof,~]=xlsread(Filepath,'Demand',strcat('D5:D',num2str(ntimestot+4)));
-
-%reading additional ambient variables
-%if ndof>1
-   [~,range]=xlsread(Filepath,'Demand','ambrange');
-   [ambvar,ambnames]=xlsread(Filepath,'Demand',range{1});
-   %killing measure unit (if present)
-   ambnames=cellfun(@(x) strtok(x),ambnames,'uniformoutput',false);
-%end
+ndof=get(ExcelApp.ActiveSheet,'Range','ambdof');
+ndof=ndof.value;
+% ndof=xlsread(Filepath,'Demand','ambdof');
 
 
+%READING AMBIENT VARIABLES
+temp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','ambrange'));
+temp=temp.value;
+ambvar=temp(2:end,:);
+ambnames=temp(1,:);
+% [~,range]=xlsread(Filepath,'Demand','ambrange');
+% [ambvar,ambnames]=xlsread(Filepath,'Demand',range{1});
+
+%killing measure unit (if present)
+ambnames=cellfun(@(x) strtok(x),ambnames,'uniformoutput',false);
 
 
-ExcelApp.Workbooks.Item(Filename).Save 
-ExcelApp.Quit;
-ExcelApp.release;
  
 
-%Demand for each good: row=good ; columns=timestep
-Dall={{Dnames{:}}' Dall'}; 
+% %Demand for each good: row=good ; columns=timestep
+% Dall={{Dnames{:}}' Dall'}; 
 
 Nmachines=double(Nmachines);
-[~,range]=xlsread(Filepath,'DATA','rangeread');
-[~,refranges]=xlsread(Filepath,'DATA',range{1});
+
+Worksheets.Item('DATA').Activate;
+temp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','rangeread'));
+% [~,range]=xlsread(Filepath,'DATA','rangeread');
+% [~,refranges]=xlsread(Filepath,'DATA',range{1});
 
 %INPUT DATA: 
 %column1 --> machine name; 
@@ -315,6 +334,9 @@ for i=1:Nnetworks
 end
 
 
+ExcelApp.Workbooks.Item(Filename).Save 
+ExcelApp.Quit;
+ExcelApp.release;
 
 
 x=find(~cellfun(@isempty,Pricetags(1,:)));  %check whether we have both networks and fuels
