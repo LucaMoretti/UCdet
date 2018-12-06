@@ -1,15 +1,21 @@
 %% MAIN ROUTINE
 clc
-read=0;
+read=1;
 
 %%Convexity check on/off 
 global convcheck            %toppa per evitare casini. In realtà converrebbe eliminare i NaN dai coefficienti calcolati, ma si rischia di perdere informazione sul fatto che c'è qualche problema con le slopes, nel caso in cui si sia effettivamente interessati.
 convcheck=false;
 
+
+
 tic
 
 if read
     clear
+    %Input file
+    excelpath=fileparts(pwd());
+    Filename='Input.xlsm';
+    Filepath=strcat(excelpath,'\',Filename);
     han = waitbar(0.05,'Simulation initialization');
     ReadExcelbau
 else
@@ -28,7 +34,7 @@ varstep=false;
 symtype = 2;
 
 %DATA FOR SYMTYPE #2
-nbatches = 365;
+nbatches = 2;
 
 %DATA FOR SYMTYPE #3
 roltsteps = 48;
@@ -53,7 +59,7 @@ STORstart=0;
 
 % You might need to act on: ntimes, D, Fuels, Networks, UndProd
 
-waitbar(0.4,han,strcat('Problem formulation',' (',num2str(cases),' cases left)'))
+waitbar(0.4,han,strcat('Problem formulation'))
 
                         %%%%%%%%%%%%%%
                         %SINGLE BATCH%
@@ -123,7 +129,6 @@ elseif symtype==2
     else
         STORstart=0;
     end
-    V0=[100;50;100];
     
     for runcount=1:(nbatches-1)
         
@@ -131,7 +136,7 @@ elseif symtype==2
 %             cane = 1;
 %         end
         
-        waitbar(0.4+0.5/nbatches*runcount,han,strcat('Solution batch n°',num2str(runcount),' (',num2str(cases),' cases left)'))
+        waitbar(0.4+0.5/nbatches*runcount,han,strcat('Solution batch n°',num2str(runcount)))
         
         %Implementation of parameters values for current simulation instance
         D(2) = cellfun(@(x) x(:,tstart:(tstart+tdur(runcount)-1)),Dall(2),'UniformOutput',false);
@@ -148,7 +153,7 @@ elseif symtype==2
         actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(convcheck&&convflag),'UniformOutput',false);
         actualcoeffs=[actualcoeffs{:}];
         %Creation of parameters input vector
-        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:} V0};
+        Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
         %Problem solution and data gathering
         Solution
         DataGathering        
@@ -198,7 +203,7 @@ elseif symtype==2
     actualintercept=cellfun(@(x) x(:,:,tstart:(tstart+tdur(runcount)-1)),intercept(convcheck&&convflag),'UniformOutput',false);
     actualcoeffs=[actualcoeffs{:}];
     %Creation of parameters input vector
-    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:} V0};
+    Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart actualcoeffs{:} actualslope{:} actualintercept{:}};
     %Problem solution and data gathering
     Solution
     DataGathering        
@@ -478,8 +483,8 @@ end
 
 totalfo=sum(Obj)
 
-% waitbar(0.9,han,'Solution plotting')
-% Plotting
+waitbar(0.9,han,'Solution plotting')
+Plotting
 waitbar(1,han,'Simulation completed!')
 close(han) 
 toc

@@ -6,10 +6,9 @@ global convcheck
 
 %addpath(genpath('D:\Dottorato\Ottimizzazione\Filone moretti!'))
 
-excelpath=fileparts(pwd());
 
-Filename='Input - V_PVT_inter.xlsm';
-Filepath=strcat(excelpath,'\',Filename);
+
+
 
 % Create object.
 ExcelApp = actxserver('Excel.Application');
@@ -38,10 +37,10 @@ if range.value~=0
     temp=get(ExcelApp.ActiveSheet,'Range',range);
     temp=temp.value;
     Undisp=temp(3:end,:);
-    Undispnames=temp(1:2,:);
+    Undispnames=(temp(1:2,:));
     
 %     [Undisp,Undispnames]=xlsread(Filepath,'Undispatch',range{1});
-    x=find(~cellfun(@isempty,Undispnames(1,:)));
+    x=find(cell2mat(cellfun(@ischar,Undispnames(1,:),'uniformoutput',false)));
     Nundisp=length(x);
     x(end+1)=length(Undispnames(2,:))+1;
 else
@@ -50,9 +49,13 @@ else
 end
 
 for i=1:Nundisp
-    UndProdall{i,1}=Undispnames(1,x(i));
+    if isnan(Undispnames{1,x(i)})
+        UndProdall{i,1}=Undispnames(1,x(i-1));
+    else
+        UndProdall{i,1}=Undispnames(1,x(i));
+    end
     UndProdall{i,2}=Undispnames(2,x(i):(x(i+1)-1));
-    UndProdall{i,3}=Undisp(:,x(i):(x(i+1)-1))';
+    UndProdall{i,3}=cell2mat(Undisp(:,x(i):(x(i+1)-1)))';
 end
 
 
@@ -134,7 +137,7 @@ for i=1:Nmachines
     %ambient tags 
     if refranges{i,8} ~= "N/A"
         temp=get(ExcelApp.ActiveSheet,'Range',refranges{i,8});
-        Machines{i,9}=(temp.value);
+        Machines{i,9}=string((temp.value));
 %         [~, Machines{i,9}]=xlsread(Filepath,'Machines',refranges{i,8});
     end
     for j=4:7

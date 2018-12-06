@@ -28,13 +28,7 @@ if symtype==1||symtype==2
         en=en+1;
         startflags=sol{en};
         MachBins=sol{en+3};
-        if sum(sum(sol{en+4}))~=0           %otherwise no feasible solution found
         STORstart=sol{en+2}';
-        V=sol{en+4};
-        V0=V(:,end);
-        else
-            msgbox(strcat('batch ',num2str(runcount),' did not converge to a feasible solution'))
-        end
 elseif  symtype==3
     st=1;
     en=Nmachines;
