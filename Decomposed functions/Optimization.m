@@ -8,9 +8,14 @@ end
 %Variable time resolution
 %timestep=sdpvar(ntimes-1,1,'full');
 
+Disspenalty=0;
+
 %Binary variables for machines
 Z=binvar(Nmachines,ntimes,'full');
 indicator=sdpvar(Nmachines,ntimes+histdepth-1);
+slopev=cell(Nmachines,1);
+interceptv=cell(Nmachines,1);
+
 %On/Off hystory
 OnOffHist=binvar(Nmachines,histdepth,'full');
 
@@ -58,6 +63,7 @@ else
     STORAGEpout=sdpvar(1,1);
 end
 
+
 %Networks variables
 if Nnetworks~=0
     NETWORKbought=sdpvar(Nnetworks,ntimes,'full');
@@ -82,62 +88,71 @@ Constr = slacks >= 0;
 %Machines characteristic curves
 for i=1:Nmachines
     INPUT{i}=sdpvar(numel(Machines{i,2}),ntimes,'full');           %Input variables for each machine
-    OUTPUT{i}=sdpvar(numel(Machines{i,3}),ntimes,'full');           %Output variables for each machine
+    OUTPUT{i}=sdpvar(numel(Machines{i,3}),ntimes,'full');           %Output variables for each machine    
     coeffs{i}=cell(ntimes,1);
-    slopev{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full');
-    interceptv{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full'); 
+    
     for j=1:ntimes
         coeffs{i}{j} = sdpvar(J(i),numel(Machines{i,2})+numel(Machines{i,3}),'full'); %coefficients of operating points, variables since they will depend on T
     end
     
+    %On-Off Machines
+    if J(i) == 1
+        temprl=reshape([coeffs{i}{:}],size(coeffs{i}{1},2),size(coeffs{i},1))';
+        Constr=[Constr sunprod*1e8>=sum(temprl,2)'];
+        for j=1:numel(Machines{i,2})
+            Constr=[Constr INPUT{i}(j,:) == (temprl(:,j)').*Z(i,:)];
+        end
+        for j=numel(Machines{i,2})+1:numel(Machines{i,2})+numel(Machines{i,3})
+            Constr=[Constr OUTPUT{i}(j-numel(Machines{i,2}),:) == (temprl(:,j)').*Z(i,:)];
+        end
+    else
+        if convexflag(i)&&convcheck     %characteristic function IS CONVEX in all outputs
+            slopev{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full');
+            interceptv{i}=sdpvar(J(i)-1,numel(Machines{i,3}),ntimes,'full'); 
+            %convexflag{i}=true;
+            %only if the convexcheck has been passed (I need to make references
+            %to variable coefficients, so I can't make the check here)
+            for k=1:numel(Machines{i,3})
+                for f=1:(J(i)-1)
+                    Constr=[Constr INPUT{i}(:)'>=OUTPUT{i}(k,:).*permute(slopev{i}(f,k,:),[1,3,2])+permute(interceptv{i}(f,k,:),[1,3,2]).*Z(i,:)];
+                    Constr=[Constr (OUTPUT{i}>=0):'Output Positivity'];
+                end
+            end
 
-    
-    if convexflag(i)&&convcheck==true     %characteristic function IS CONVEX in all outputs
-        %convexflag{i}=true;
-        %only if the convexcheck has been passed (I need to make references
-        %to variable coefficients, so I can't make the check here)
-        for k=1:numel(Machines{i,3})
-            for f=1:(J(i)-1)
-                Constr=[Constr INPUT{i}(:)'>=OUTPUT{i}(k,:).*permute(slopev{i}(f,k,:),[1,3,2])+permute(interceptv{i}(f,k,:),[1,3,2]).*Z(i,:)];
-                Constr=[Constr (OUTPUT{i}>=0):'Output Positivity'];
+        else   %characteristic function IS NOT CONVEX in all outputs 
+
+            alfas{i}=sdpvar(J(i),ntimes,'full');           %alfa variables for each machine and each timestep
+            Constr=[Constr (0<=alfas{i}<=1):'Alfas limitation'];                             %alfa values always in between 0 and 1
+            Constr=[Constr (sum(alfas{i},1)==Z(i,:)):'Alfas only if machine on'];          %sum of alfas in one timestep equal to one if machine on
+            betas{i}=binvar(J(i)-1,ntimes);          %beta variables for each machine and each timestep
+            Constr=[Constr sum(betas{i},1)== 1];                       %only one segment active in each timestep
+            for j=2:(J(i)-1)
+            Constr=[Constr alfas{i}(j,:)<=betas{i}(j-1,:)+betas{i}(j,:)];        %only alfas which are edge of selected beta segment are greater than zero
+            end
+            Constr=[Constr alfas{i}(1,:)<=betas{i}(1,:)];                       %first alfa constraint
+            Constr=[Constr alfas{i}(J(i),:)<=betas{i}((J(i)-1),:)];             %last alfa constraint
+
+            %Relation between alfas, betas and input/output(s)
+                colP=1;     %starting column for reading sampled points matrix
+
+            for j=1:numel(Machines{i,2})
+                temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
+                temp=[temp{:}];
+                Constr=[Constr INPUT{i}(j,:) == sum(temp.*alfas{i},1)];
+                %Constr=[Constr (INPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h))];
+                colP=colP+1;
+            end
+            for j=1:numel(Machines{i,3})
+                temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
+                temp=[temp{:}];                
+                Constr=[Constr OUTPUT{i}(j,:) == sum(temp.*alfas{i},1)];
+                %Constr=[Constr OUTPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)];
+                colP=colP+1;
             end
         end
-        
-    else   %characteristic function IS NOT CONVEX in all outputs 
-            
-        alfas{i}=sdpvar(J(i),ntimes,'full');           %alfa variables for each machine and each timestep
-        Constr=[Constr (0<=alfas{i}<=1):'Alfas limitation'];                             %alfa values always in between 0 and 1
-        Constr=[Constr (sum(alfas{i},1)==Z(i,:)):'Alfas only if machine on'];          %sum of alfas in one timestep equal to one if machine on
-        betas{i}=binvar(J(i)-1,ntimes);          %beta variables for each machine and each timestep
-        Constr=[Constr sum(betas{i},1)== 1];                       %only one segment active in each timestep
-        for j=2:(J(i)-1)
-        Constr=[Constr alfas{i}(j,:)<=betas{i}(j-1,:)+betas{i}(j,:)];        %only alfas which are edge of selected beta segment are greater than zero
-        end
-        Constr=[Constr alfas{i}(1,:)<=betas{i}(1,:)];                       %first alfa constraint
-        Constr=[Constr alfas{i}(J(i),:)<=betas{i}((J(i)-1),:)];             %last alfa constraint
-
-        %Relation between alfas, betas and input/output(s)
-            colP=1;     %starting column for reading sampled points matrix
-
-        for j=1:numel(Machines{i,2})
-            temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
-            temp=[temp{:}];
-            Constr=[Constr INPUT{i}(j,:) == sum(temp.*alfas{i},1)];
-            %Constr=[Constr (INPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h))];
-            colP=colP+1;
-        end
-        for j=1:numel(Machines{i,3})
-            temp=cellfun(@(x) x(:,colP),coeffs{i},'uni',false);
-            temp=[temp{:}];                
-            Constr=[Constr OUTPUT{i}(j,:) == sum(temp.*alfas{i},1)];
-            %Constr=[Constr OUTPUT{i}(j,h)==coeffs{i}{h}(:,colP)'*alfas{i}(:,h)];
-            colP=colP+1;
-        end
- 
     end
 
 end
-
 
 
 %Operation limits, ramp limits(1) and on/off variables
@@ -164,11 +179,15 @@ for i=1:Nmachines
     %Vincolo in discesa 
     Constr=[Constr OUTPUT{i}(1,1:(end-1)) - OUTPUT{i}(1,2:end) <= Machines{i,6}(1)*timestep(1:end-1)' + (1-Z(i,2:end))*Mbig]; %again, ramp limit on main machine output
     Constr=[Constr LastProd(i) - OUTPUT{i}(1,1) <= Machines{i,6}(1)*timestep + (1-Z(i,1))*Mbig]; %Initial ramping constraint
+%     for h=1:ntimes
+%             Constr=[Constr Z(i,h) <= sum(sum(coeffs{i}{h}))];
+%     end
     %Vincolo in discesa con spegnimento macchina a minimo carico (da
     %completare)
 %     Constr=[Constr OUTPUT{i}(1,1:(end-1)) - OUTPUT{i}(1,2:end) <= Machines{i,6}(1)*timestep.*Z(i,2:end) + (Z(i,1:(end-1))-Z(i,2:end)).*(OUTPUT{i}(1,1:(end-1))]; 
 
 end
+
 
 
 
@@ -182,7 +201,7 @@ for i=1:exclusivegroups
         end
     end
 end
-            
+
 for i=1:exclusivegroups
     Constr=[Constr sum(Z(logicflags(:,i),:))<=1];
 end
@@ -204,7 +223,7 @@ for unit = 1:Nmachines
     for k = (histdepth-baseminupsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
         l=0;
-        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<=Machines{unit,7}(2))
+        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<Machines{unit,7}(2))
             l=l+1;
         end
         range = k:(k+l);
@@ -220,7 +239,7 @@ for unit = 1:Nmachines
     for k = (histdepth-basemindownsteps+2):(histdepth+ntimes)
         % indicator will be 1 only when switched on
         l=0;
-        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<=Machines{unit,7}(3))
+        while (k+l+1)<(histdepth+ntimes)&&(sum(extendedtimestep(k:(k+l)))<Machines{unit,7}(3))
             l=l+1;
         end
         range = k:(k+l);
@@ -241,20 +260,20 @@ Constr=[Constr Zext(:,(histdepth+1):end)-Zext(:,histdepth:(end-1))<=delta];
 
 Constr=[Constr STORAGEpin>=0];
 Constr=[Constr STORAGEpout>=0];
-   
+
+FinStorCharge = sdpvar(1,Nstorages);
 
 for i=1:Nstorages
     Constr=[Constr STORAGEpower(i,:)==STORAGEpout(i,:)*Storages{i,6}-STORAGEpin(i,:)/Storages{i,4}];
-    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}*zSTOR(i,:).*timestep'];    %limit in charge/discharge
-    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}*(1-zSTOR(i,:)).*timestep'];    %limit in charge/discharge
+    Constr=[Constr STORAGEpout(i,:)<=Storages{i,5}.*zSTOR(i,:)];    %limit in charge/discharge
+    Constr=[Constr STORAGEpin(i,:)<=Storages{i,3}.*(1-zSTOR(i,:))];    %limit in charge/discharge
     Constr=[Constr STORAGEcharge(i,1)==STORstart(i)];    %energy content initial condition
     Constr=[Constr STORAGEcharge(i,2:end)==STORAGEcharge(i,1:(end-1)).*(1-Storages{i,7}.*timestep(1:end-1)')-(STORAGEpout(i,1:(end-1))-STORAGEpin(i,1:(end-1))).*timestep(1:end-1)']; %energy content evolution in time
     % Energy(k+1)=Energy(k)[kWh]-Power(k)[kW]*?t[h] <--- assicurati che
     % unità di misura siano coerenti!!!
-    if symtype~=3
-        Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end)==STORstart(i)]; %cyclic storage charge condition  
-    end
     Constr=[Constr Storages{i,9}./100<=STORAGEcharge(i,:)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints
+    Constr=[Constr Storages{i,9}./100<=FinStorCharge(i)./Storages{i,2}<=Storages{i,8}./100];    %SOC constraints Final charge
+    Constr=[Constr STORAGEcharge(i,end).*(1-Storages{i,7}.*timestep(end))-(STORAGEpout(i,end)-STORAGEpin(i,end)).*timestep(end) == FinStorCharge(i)]; %final storage valorization
 end
 
 
@@ -291,6 +310,7 @@ netprod=sdpvar(Noutputs,ntimes,'full');     %Net units production for each Outpu
 Diss=sdpvar(Noutputs,ntimes,'full');                                %NB: CURRENTLY NO UPPER LIMIT SET ON DISSIPATION!!!
 Constr=[Constr Diss>=0];
 
+
 for i=1:Noutputs
     nprod=0;
     ncons=0;
@@ -325,7 +345,6 @@ for j=1:Noutputs
             l=l+1;
             Constr=[Constr machcons{j}(l,:)==INPUT{i}(ismember(Machines{i,2},Outputs(j)),:)+delta(i,:).*SUcosts(i)];
         end
-
     end
     f=0;
     for i=1:Nundisp
@@ -363,7 +382,7 @@ for j=1:Noutputs
         Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + NETWORKbought(netind,:) - NETWORKsold(netind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
     elseif store(j)==1&&net(j)==0
         [~,~,storeind]=intersect(Outputs(j),Storages(:,1));
-        Constr=[Constr [netprod(j,:) + + STORAGEpower(storeind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
+        Constr=[Constr [netprod(j,:) + STORAGEpower(storeind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]]; %ONLYFORRICH
     elseif store(j)==0&&net(j)==1
         [~,~,netind]=intersect(Outputs(j),Networks(:,1));
         Constr=[Constr [netprod(j,:) + NETWORKbought(netind,:) - NETWORKsold(netind,:) + slacks(j,:) == D{2}(j,:)+Diss(j,:)]];
@@ -409,20 +428,37 @@ if suppresswarning==1
     warning('on','all')
 end
 
-waitbar(0.6,han,'Problem Solution')
 
 %%%%%%%%%%%%%%%%%%%%%%
 % OBJECTIVE FUNCTION %
 %%%%%%%%%%%%%%%%%%%%%%
 %[~,~,costorder]=intersect(Outputs,{Networks{:,1}},'stable'); %cost and networks might be listed differently
 if Nnetworks~=0
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Z.*repmat([4 0 0]',1,ntimes)));
+% <<<<<<< HEAD
+%     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Z.*repmat([4 0 0]',1,ntimes)));
+% else
+%     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks)+sum(sum(Z.*repmat([4 0 0]',1,ntimes)));
+% =======
+Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep'.*(1+0.00005*[1:ntimes]),[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty));%-FinStorCharge*0 %sum(sum((STORAGEpin-STORAGEpout).*repmat(timestep',Nstorages,1).*[zeros(1,ntimes);1+0.005.^[1:ntimes]]*0.00005))
+%     if Nstorages == 3   
+%         Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-FinStorCharge*[1;0.00005;0];
+%     else
+%         Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(sum([Networks{:,4}]'.*(NETWORKbought.*repmat(timestep',[Nnetworks 1]))))-sum(sum([Networks{:,5}]'.*(NETWORKsold.*repmat(timestep',[Nnetworks 1]))))+sum(slackcost*(slacks.*repmat(timestep',[size(D{2},1) 1])))+sum(sum(Diss.*repmat(timestep',[size(D{2},1) 1])*Disspenalty))-FinStorCharge*[0.00005;0]; 
+%     end
 else
-    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks)+sum(sum(Z.*repmat([4 0 0]',1,ntimes)));
+    %TO BE ALIGNED WITH VARIABLE TIME MESH CONCEPT
+    Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks);
+    %With dissipation penalty
+%     Objective=sum(sum([Fuels{:,2}]'.*(fuelusage.*repmat(timestep',[Nfuels 1]))))+sum(slackcost*slacks)+sum(Diss*Disspenalty);
+% >>>>>>> N-ambient-variables
 end
 
+Constr=[Constr Objective>=-1e10];
+
 coefcontainer=[coeffs{:}];
-Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{:} interceptv{:}};
+% Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:} slopev{~cellfun(@isempty, slopev)} interceptv{~cellfun(@isempty, interceptv)}};
+Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart coefcontainer{:}};
+
 % Param={D{2} Fuels{:,2} Networks{:,4:5} UndProd{:,3} OnOffHist LastProd STORstart};
 if symtype==2||symtype==1
     advance=ntimes+1;
@@ -431,9 +467,10 @@ elseif symtype==3
 end
 
 
-Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod};
+% Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod FinStorCharge Z};
+Outs={INPUT{:} OUTPUT{:} STORAGEcharge STORAGEpower NETWORKbought NETWORKsold Diss slacks Zext(:,advance:(advance+histdepth-1)) fuelusage delta netprod FinStorCharge Z};
 
-ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'verbose',3);
+ops = sdpsettings('solver','gurobi','gurobi.MIPGap',0.005,'gurobi.MIPGapAbs',1e-1,'gurobi.TimeLimit',40,'verbose',3);
 
 Model=optimizer(Constr,Objective,ops,Param,Outs);
 

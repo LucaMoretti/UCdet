@@ -15,6 +15,7 @@
 %column11 --> Output profile of each non-dispatchable machine
 %column12 --> Utility consumers tag
 %column13 --> Utility consumers consumption profile
+%column17 --> Machines on-off variables
 nstor=0;
 nnet=0;
 
@@ -188,6 +189,7 @@ for i=1:Noutputs
                     Pmat{i,2}=Machines{j,1};
                     Pmat{i,3}=[(OUTPUT{j}(h,:))];
                     Pmat{i,17}=[(INPUT{j})];
+%                     Pmat{i,17}=[MachBins(j,:)];
                 else
                     Pmat{i,2}=[Pmat{i,2};Machines{j,1}];
                     Pmat{i,3}=[Pmat{i,3};(OUTPUT{j}(h,:))];
@@ -232,6 +234,11 @@ for i=1:Noutputs
     Pmat{i,6}=zeros(1,ntimestot);
     Pmat{i,7}=zeros(1,ntimestot);
     Pmat{i,8}=zeros(1,ntimestot);
+%     Pmat{i,4}=[];
+%     Pmat{i,5}=[];
+%     Pmat{i,6}=[];
+%     Pmat{i,7}=[];
+%     Pmat{i,8}=[];
     
     if Nstorages~=0&&ismember(Outputs{i},{Storages{:,1}}) %strcmp({Storages{:,1}},Outputs{i}))>0 
         nstor=ismember({Storages{:,1}},Outputs{i});
@@ -344,6 +351,7 @@ for i=1:Noutputs
                 f=f+1;
                 Pmat{i,3}(f,pos)=[(OUTPUT{j}(h,:))];
                 Pmat{i,17}(f,pos)=[(INPUT{j})];
+%                 Pmat{i,17}(f,pos)=[MachBins(j,:)];
             end
         end
         %Consumption by machine i of good j

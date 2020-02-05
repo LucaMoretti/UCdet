@@ -1,5 +1,5 @@
 %% DATA READING FROM EXCEL FILE
-
+global convcheck
 %%IMPORTANTE!! Bisogna fare un unico accesso all'excel, e smistare poi in
 %%Matlab i profili alle varie variabili. In questo modo velocizziamo di
 %%brutto questa fase della simulazione
@@ -11,10 +11,31 @@ excelpath=fileparts(pwd());
 Filename='VEBA.xlsm';
 Filepath=strcat(excelpath,'\',Filename);
 
+% Create object.
+ExcelApp = actxserver('Excel.Application');
+ExcelApp.Visible = 0;
+ExcelApp.Workbooks.Open(fullfile(Filepath));
+% Workbook = ExcelApp.ActiveWorkbook;
+% Worksheets = Workbook.sheets;
+
+
+% Open file located in the current folder.
+Nmachines=ExcelApp.Run('machinesref');  %Total number of machines
+
+%READING DEMAND PROFILES
+% Worksheets.Item('Demand').Activate;
+% Dtemp=get(ExcelApp.ActiveSheet,'Range',get(ExcelApp.ActiveSheet,'Range','datarange'));
+% Dtemp = Dtemp.value;
+% Dall = {Dtemp(1,:)',cell2mat(Dtemp(2:end,:))'};
 [~,range]=xlsread(Filepath,'Demand','datarange');
 [Dall,Dnames]=xlsread(Filepath,'Demand',range{1});
+
+%READING UNDISPATCHABLE PRODUCTION PROFILES
+% Worksheets.Item('Undispatch').Activate;
+% range=get(ExcelApp.ActiveSheet,'Range','ddatarange');
 [~,range]=xlsread(Filepath,'Undispatch','ddatarange');
 if ~isempty(range) 
+    
     [Undisp,Undispnames]=xlsread(Filepath,'Undispatch',range{1});
     x=find(~cellfun(@isempty,Undispnames(1,:)));
     Nundisp=length(x);
@@ -37,18 +58,23 @@ basetimestep = xlsread(Filepath,'Demand','tdur');   % simulation timestep [h]
 ntimestot=size(Dall,1);                               % total number of timesteps
 days=ntimestot*basetimestep/24;                        % simulation days
 
-%Temperature Profiles
-[Tprof,~]=xlsread(Filepath,'Demand',strcat('D5:D',num2str(ntimestot+4)));
+%Temperature Profiles %THIS WILL BECOME GENERAL NON-CONTROLLABLE DEGREES OF
+%FREEDOM
+ndof=xlsread(Filepath,'Demand','ambdof');
+
+%[Tprof,~]=xlsread(Filepath,'Demand',strcat('D5:D',num2str(ntimestot+4)));
+
+%reading additional ambient variables
+%if ndof>1
+   [~,range]=xlsread(Filepath,'Demand','ambrange');
+   [ambvar,ambnames]=xlsread(Filepath,'Demand',range{1});
+   %killing measure unit (if present)
+   ambnames=cellfun(@(x) strtok(x),ambnames,'uniformoutput',false);
+%end
 
 
-% Create object.
-ExcelApp = actxserver('Excel.Application');
-ExcelApp.Visible = 1;
 
 
-% Open file located in the current folder.
-ExcelApp.Workbooks.Open(fullfile(Filepath));
-Nmachines=ExcelApp.Run('machinesref');  %Total number of machines
 ExcelApp.Workbooks.Item(Filename).Save 
 ExcelApp.Quit;
 ExcelApp.release;
@@ -58,7 +84,7 @@ ExcelApp.release;
 Dall={{Dnames{:}}' Dall'}; 
 
 Nmachines=double(Nmachines);
-[~,range]=xlsread(Filepath,'DATA','I2');
+[~,range]=xlsread(Filepath,'DATA','rangeread');
 [~,refranges]=xlsread(Filepath,'DATA',range{1});
 
 %INPUT DATA: 
@@ -69,11 +95,17 @@ Nmachines=double(Nmachines);
 %column5 --> operation limits (on first output)
 %column6 --> ramp limits (on first output)
 %column7 --> SU/SD times, penalty and min up times                          NB: SU time substituted with exclusive on flag (column 1 of group 7)
+%column9 --> operating coefficients
+%column9 --> Ambient parameters
 
 %Each row corresponds to a different machine
 for i=1:Nmachines
     for j=1:3
     [~, Machines{i,j}]=xlsread(Filepath,'Machines',refranges{i,j});
+    end
+    %ambient tags 
+    if refranges{i,8} ~= "N/A"
+        [~, Machines{i,9}]=xlsread(Filepath,'Machines',refranges{i,8});
     end
     for j=4:7
     Machines{i,j}=xlsread(Filepath,'Machines',refranges{i,j});
@@ -88,37 +120,71 @@ exclusivegroups=length(exclusivetags);
 
 
 a=cellfun(@(x) x(:,2:3),Machines(:,7),'UniformOutput',false);
-histdepth=ceil(max([a{:}])/basetimestep);                                          %already in number of timesteps
+histdepth=max([ceil(max([a{:}])/basetimestep) 1]);                                          %already in number of timesteps
 
 
 
 %Rearranging operating points
 for i=1:Nmachines
+    nambs=length(Machines{i,9});
     matrix=Machines{i,4};
-    ntemps=sum(~isnan(matrix(:,1))); %temperatures at which characteristic curves is available
-    J(i)=size(matrix,1)/ntemps;      %number of sampled points for each machine
+    if nambs ~= 0
+        ntemps=sum(~isnan(matrix(:,1:nambs)),1); %temperatures at which characteristic curves is available
+        J(i)=size(matrix,1)/ntemps(end);      %number of sampled points for each machine
+    else
+        J(i)=size(matrix,1);
+    end
     Machines{i,4}=cell(1,2);
-    for h=1:ntemps
-        Machines{i,4}{1}(h)=matrix(1+(h-1)*J(i),1);
-        Machines{i,4}{2}{h}=matrix(1+(h-1)*J(i):h*J(i),2:end);
-    end    
+    t=0;
+    for h=1:nambs
+        for l=2:size(matrix,1)
+            if isnan(matrix(l,h))
+                matrix(l,h)=matrix(l-1,h);
+            end
+        end
+    end
+    if nambs~=0
+        for h=1:ntemps(end)
+            Machines{i,4}{1}(h,:)=matrix(1+(h-1)*J(i),1:nambs);
+            Machines{i,4}{2}{h,:}=matrix(1+(h-1)*J(i):h*J(i),nambs+1:end);
+        end    
+    else
+        Machines{i,4}{2}=matrix;
+    end
 end
 
-C = cell(1,1,ntimestot);
+ C = cell(1,1,ntimestot);
 
 %Operating Coefficients for each machine            N.B. It could be possible to extrapolate as well, and to change the interpolation method
                                                     %from linear
 for i=1:Nmachines
     t=Machines{i,4}{1};
-    if size(t,2)>1
+    if size(t,1)>1
+        influencer=ismember(ambnames,Machines{i,9});
+        ambprof=ambvar(:,influencer);
         x=cat(3,Machines{i,4}{2}{:});
-        x = permute(x,[3 1 2]);
-        C=interp1(t,x,Tprof);
-        C = permute(C,[2 3 1]);
-        C=mat2cell(C,size(C,1),size(C,2),ones(size(C,3),1));
-        Machines{i,8}=squeeze(C);
+        if size(Machines{i,9},2)>1
+            x=num2cell(x,3);
+            F=cellfun(@(x) scatteredInterpolant(t,squeeze(x),'linear','none'),x,'UniformOutput',false);
+            Machines{i,8}=cell2mat(cellfun(@(x) permute(x(ambprof),[2 3 1]),F,'UniformOutput',false));
+            tempvar=Machines{i,8}(:,1,:);
+            tempvar(isnan(tempvar))=0;
+            Machines{i,8}(:,1,:)=tempvar;
+            tempvar=Machines{i,8}(:,2:end,:);
+            tempvar(isnan(tempvar))=0;
+            Machines{i,8}(:,2:end,:)=tempvar;
+            [x1 x2 x3] = size(Machines{i,8});
+            Machines{i,8}=squeeze(mat2cell(Machines{i,8}, x1, x2, ones(1,x3)));
+%             Machines{i,8}=cellfun(@(x) mat2cell(x),Machines{i,8},'UniformOutput',false);
+        elseif size(Machines{i,9},2)==1
+            x = permute(x,[3 1 2]);
+            C=interp1(t,x,ambprof,'linear',0);
+            C = permute(C,[2 3 1]);
+            C=mat2cell(C,size(C,1),size(C,2),ones(size(C,3),1));
+            Machines{i,8}=squeeze(C);
+        end
     else
-        [C(:)]=deal(Machines{i,4}{2});
+        [C(:)]=deal(Machines{i,4}(2));
         Machines{i,8}=squeeze(C);
     end
 end
@@ -148,8 +214,13 @@ for i=1:Nmachines
     for h=1:ntimestot                            %for each time instant
         for f=1:(J(i)-1)                    %for each segment
             for k=1:numel(Machines{i,3})    %and for each output (NB:we assume we have only one input)
-                slope{i}(f,k,h)=(Machines{i,8}{h}(f+1,1)-Machines{i,8}{h}(f,1))/(Machines{i,8}{h}(f+1,1+k)-Machines{i,8}{h}(f,1+k));
-                intercept{i}(f,k,h)=Machines{i,8}{h}(f+1,1)-slope{i}(f,k,h)*Machines{i,8}{h}(f+1,1+k);
+                if convcheck
+                    slope{i}(f,k,h)=(Machines{i,8}{h}(f+1,1)-Machines{i,8}{h}(f,1))/(Machines{i,8}{h}(f+1,1+k)-Machines{i,8}{h}(f,1+k));
+                    intercept{i}(f,k,h)=Machines{i,8}{h}(f+1,1)-slope{i}(f,k,h)*Machines{i,8}{h}(f+1,1+k);
+                else
+                    slope{i}(f,k,h)=0;
+                    intercept{i}(f,k,h)=0;
+                end
             end
         end
     end
@@ -213,7 +284,7 @@ end
 Nnetworks=i;
 
 for i=1:Noutputs
-M(i)=max(Dall{2}(i,:))*10;  %M1 related to maximum good demand (an order of magnitude higher
+M(i)=max(Dall{2}(i,:))*100;  %M1 related to maximum good demand (an order of magnitude higher
 end
 Mbigspare=max(M);
 
